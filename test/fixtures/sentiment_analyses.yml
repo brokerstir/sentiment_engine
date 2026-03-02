@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  trend: one
+  llm_model: MyString
+  score: 1.5
+  reasoning: MyText
+
+two:
+  trend: two
+  llm_model: MyString
+  score: 1.5
+  reasoning: MyText
