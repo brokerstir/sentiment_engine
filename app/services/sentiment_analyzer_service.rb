@@ -33,8 +33,8 @@ class SentimentAnalyzerService
 
     # We replace the broken @client.generate_content with a direct API call
     uri = URI("https://generativelanguage.googleapis.com/v1beta/models/#{@model}:generateContent?key=#{@api_key}")
-    request = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
-    request.body = { contents: [{ parts: [{ text: prompt }] }] }.to_json
+    request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
+    request.body = { contents: [ { parts: [ { text: prompt } ] } ] }.to_json
 
     response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
       http.request(request)

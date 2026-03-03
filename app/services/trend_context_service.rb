@@ -8,7 +8,7 @@ class TrendContextService
   end
 
   def call
-    # For now, we'll simulate the search results. 
+    # For now, we'll simulate the search results.
     # In Phase 4, we'll plug in the NewsAPI key here.
     [
       "Latest update on #{@trend_name} injury report.",

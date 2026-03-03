@@ -1,5 +1,5 @@
-require 'rss'
-require 'open-uri'
+require "rss"
+require "open-uri"
 
 module Providers
   class GoogleTrendsProvider
@@ -9,11 +9,11 @@ module Providers
     def fetch
       response = URI.open(RSS_URL).read
       feed = RSS::Parser.parse(response)
-      
+
       feed.items.map do |item|
-        { 
-          name: item.title, 
-          source: "Google Trends" 
+        {
+          name: item.title,
+          source: "Google Trends"
         }
       end
     rescue => e
