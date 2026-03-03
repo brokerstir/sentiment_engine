@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_02_053421) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_03_051936) do
   create_table "sentiment_analyses", force: :cascade do |t|
     t.bigint "trend_id", null: false
     t.string "llm_model"
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_02_053421) do
     t.text "reasoning"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.float "intensity"
     t.index ["trend_id"], name: "index_sentiment_analyses_on_trend_id"
   end
 

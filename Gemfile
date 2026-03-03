@@ -45,6 +45,9 @@ gem "thruster", require: false
 # Use Turso
 gem "libsql_activerecord"
 
+# For Google Trends
+gem "rss"
+
 # Use AI
 gem "anthropic"
 gem "gemini-ai"

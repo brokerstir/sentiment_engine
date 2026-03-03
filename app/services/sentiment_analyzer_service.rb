@@ -1,33 +1,65 @@
+require "net/http"
+require "json"
+
 class SentimentAnalyzerService
+  def self.call(trend)
+    new(trend).call
+  end
+
   def initialize(trend)
     @trend = trend
+    @creds = Rails.application.credentials.gemini
+
+    # This is exactly what you showed works in the console
+    @api_key = @creds.api_key
+    @model = @creds.model
   end
 
   def call
-    # 1. Define your prompt to force JSON output
-    prompt = "Analyze the sentiment for the topic: '#{@trend.name}'. 
-              Return ONLY a JSON object with: 
-              { 'score': float (-1.0 to 1.0), 'reasoning': 'text', 'tone': 'string' }"
+    context = TrendContextService.call(@trend.name)
 
-    # 2. Logic to pick which AI to use (we can cycle through them)
-    # For now, let's use a placeholder for your chosen model
-    response_data = fetch_ai_analysis(prompt)
+    # We keep your exact prompt
+    prompt = <<~PROMPT
+      Analyze the sentiment of the following news context for the topic "#{@trend.name}":
+      "#{context}"
 
-    # 3. Save the result
+      Return ONLY a JSON object with:
+      {
+        "score": float (-1.0 to 1.0, where -1 is very negative/hateful, 1 is very positive/joyful),
+        "intensity": float (0.0 to 1.0, where 0 is boring/indifferent, 1 is high-passion/viral/angry/excited),
+        "reasoning": "A concise 2-sentence explanation"
+      }
+    PROMPT
+
+    # We replace the broken @client.generate_content with a direct API call
+    uri = URI("https://generativelanguage.googleapis.com/v1beta/models/#{@model}:generateContent?key=#{@api_key}")
+    request = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
+    request.body = { contents: [{ parts: [{ text: prompt }] }] }.to_json
+
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+      http.request(request)
+    end
+
+    # Extract JSON from the raw response body
+    raw_body = JSON.parse(response.body)
+    raw_text = raw_body.dig("candidates", 0, "content", "parts", 0, "text")
+
+    # Your preferred JSON extraction logic
+    clean_json = raw_text.match(/\{.*\}/m)[0]
+    result = JSON.parse(clean_json)
+
+    # Save to DB using your schema
     @trend.sentiment_analyses.create!(
-      llm_model: "PLACEHOLDER_MODEL_NAME", # e.g., claude-3-5-sonnet
-      score: response_data[:score],
-      reasoning: response_data[:reasoning]
+      llm_model: @model,
+      score: result["score"],
+      intensity: result["intensity"],
+      reasoning: result["reasoning"]
     )
 
     @trend.completed!
-  end
-
-  private
-
-  def fetch_ai_analysis(prompt)
-    # This is where we will put the specific API calls for Gemini/Anthropic/Grok
-    # For today's test, we return mock data to ensure the pipeline is solid.
-    { score: 0.85, reasoning: "Strong positive outlook on Rails 8 features.", tone: "Excited" }
+  rescue => e
+    @trend.failed!
+    Rails.logger.error "[SentimentAnalyzerService] Error: #{e.message}"
+    raise e
   end
 end
