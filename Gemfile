@@ -45,6 +45,11 @@ gem "thruster", require: false
 # Use Turso
 gem "libsql_activerecord"
 
+# Use AI
+gem "anthropic"
+gem "gemini-ai"
+gem "ruby-openai" # Grok (xAI) uses the OpenAI-compatible protocol
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
