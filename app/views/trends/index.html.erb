@@ -1,0 +1,15 @@
+<div style="padding: 20px; font-family: sans-serif;">
+  <h1>Sentiment Cloud Dashboard</h1>
+
+  <% @trends.each do |trend| %>
+    <div style="margin-bottom: 60px; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
+      <h2><%= trend.name.titleize %></h2>
+      
+      <div style="height: 500px; width: 100%;">
+        <canvas data-controller="sentiment-map" 
+                data-sentiment-map-points-value="<%= trend.chart_data.to_json %>">
+        </canvas>
+      </div>
+    </div>
+  <% end %>
+</div>

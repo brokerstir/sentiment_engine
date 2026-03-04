@@ -45,7 +45,9 @@ class SentimentAnalyzerService
           llm_model: @creds[:model],
           score: result["score"],
           intensity: result["intensity"],
-          reasoning: result["reasoning"]
+          reasoning: result["reasoning"],
+          headline: item_context[:headline],
+          url: item_context[:url]
         )
         puts "SUCCESS [#{@provider_name}]: Created analysis for item #{index + 1}"
       end

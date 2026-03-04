@@ -26,8 +26,12 @@ class TrendContextService
         # Google RSS descriptions often contain HTML tables and links.
         # strip_tags gives the LLM clean, high-signal text.
         clean_description = strip_tags(item.description)
-
-        "HEADLINE: #{item.title} | SUMMARY: #{clean_description}"
+        # inside the map block
+        {
+          headline: item.title,
+          url: item.link,
+          full_context: "HEADLINE: #{item.title} | SUMMARY: #{clean_description}"
+        }
       end
     end
 
