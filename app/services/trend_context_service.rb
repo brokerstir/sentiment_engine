@@ -22,7 +22,7 @@ class TrendContextService
     URI.open(url) do |rss|
       feed = RSS::Parser.parse(rss)
 
-      context_blocks = feed.items.first(5).map do |item|
+      context_blocks = feed.items.first(3).map do |item|
         # Google RSS descriptions often contain HTML tables and links.
         # strip_tags gives the LLM clean, high-signal text.
         clean_description = strip_tags(item.description)
@@ -31,7 +31,7 @@ class TrendContextService
       end
     end
 
-    context_blocks.join("\n---\n")
+    context_blocks
   rescue => e
     Rails.logger.error "Context Fetcher Error: #{e.message}"
     "No recent news context available."

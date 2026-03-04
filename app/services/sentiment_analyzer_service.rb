@@ -3,74 +3,63 @@ require "json"
 
 class SentimentAnalyzerService
   def self.call(trend)
-    # Senior Guard: See which models have already analyzed this trend
-    existing_models = trend.sentiment_analyses.pluck(:llm_model).to_set
+    context_items = TrendContextService.call(trend.name)
+    expected_count = context_items.size
 
-    # Only pick providers that haven't run yet
-    providers_to_run = [:gemini, :grok].reject do |p|
-      existing_models.include?(Rails.application.credentials.dig(p, :model))
-    end
+    [:gemini, :grok].each do |provider|
+      model_name = Rails.application.credentials.dig(provider, :model)
 
-    if providers_to_run.empty?
-      puts "SKIPPING: Trend '#{trend.name}' already analyzed by all models."
-      return
-    end
+      # Senior Fix: Only skip if the record count matches the context count
+      actual_count = trend.sentiment_analyses.where(llm_model: model_name).count
 
-    # Fetch context only if we actually have work to do
-    context = TrendContextService.call(trend.name)
-    puts "Context fetched: #{context.truncate(50)}"
+      if actual_count >= expected_count
+        puts "SKIPPING [#{provider}]: All #{expected_count} items analyzed."
+        next
+      end
 
-    providers_to_run.each do |provider|
-      new(trend, provider, context).call
+      new(trend, provider, context_items).call
     end
 
     trend.completed!
   end
 
-  def initialize(trend, provider_name, context)
+  def initialize(trend, provider_name, context_items)
     @trend = trend
     @provider_name = provider_name
     @creds = Rails.application.credentials[provider_name]
-    @context = context
+    @context_items = context_items
   end
 
   def call
-    # Final safety check: Double-check inside the instance call
-    # to prevent race conditions if multiple workers hit this at once.
-    if @trend.sentiment_analyses.exists?(llm_model: @creds[:model])
-      puts "SKIPPING [#{@provider_name}]: Model '#{@creds[:model]}' already exists for this trend."
-      return
-    end
+    @context_items.each_with_index do |item_context, index|
+      # Deep Guard: Don't re-analyze the specific index if it exists
+      # Note: This assumes order is consistent (it is, from the RSS feed)
+      if @trend.sentiment_analyses.where(llm_model: @creds[:model]).offset(index).exists?
+        next
+      end
 
-    result = fetch_analysis
-    if result.nil?
-      puts "FAILED: No result returned from #{@provider_name}"
-      return
-    end
+      result = fetch_analysis(item_context)
 
-    # Senior Practice: use create! (with bang) to raise error if validation fails
-    analysis = @trend.sentiment_analyses.create!(
-      llm_model: @creds[:model],
-      score: result["score"],
-      intensity: result["intensity"],
-      reasoning: result["reasoning"]
-    )
-    puts "SUCCESS: Created analysis for #{@provider_name} (ID: #{analysis.id})"
+      if result
+        @trend.sentiment_analyses.create!(
+          llm_model: @creds[:model],
+          score: result["score"],
+          intensity: result["intensity"],
+          reasoning: result["reasoning"]
+        )
+        puts "SUCCESS [#{@provider_name}]: Created analysis for item #{index + 1}"
+      end
+    end
   rescue => e
     puts "CRITICAL ERROR [#{@provider_name}]: #{e.message}"
-    Rails.logger.error "[SentimentAnalyzerService] #{e.message}"
   end
 
   private
 
-  def fetch_analysis
-    response = (@provider_name == :gemini) ? post_to_gemini : post_to_grok
+  def fetch_analysis(specific_context)
+    response = (@provider_name == :gemini) ? post_to_gemini(specific_context) : post_to_grok(specific_context)
 
-    unless response.is_a?(Net::HTTPSuccess)
-      puts "HTTP ERROR [#{@provider_name}]: #{response.code} - #{response.body}"
-      return nil
-    end
-
+    return nil unless response.is_a?(Net::HTTPSuccess)
     parse_ai_response(response)
   end
 
@@ -92,20 +81,19 @@ class SentimentAnalyzerService
     json_match ? JSON.parse(json_match[0]) : nil
   end
 
-  def post_to_gemini
+  def post_to_gemini(specific_context)
     uri = URI("https://generativelanguage.googleapis.com/v1beta/models/#{@creds[:model]}:generateContent?key=#{@creds[:api_key]}")
-    payload = { contents: [{ parts: [{ text: prompt_text }] }] }
+    payload = { contents: [{ parts: [{ text: prompt_text(specific_context) }] }] }
     make_request(uri, payload)
   end
 
-  def post_to_grok
-    # Ensure this URL matches the latest xAI documentation
+  def post_to_grok(specific_context)
     uri = URI("https://api.x.ai/v1/chat/completions")
     payload = {
       model: @creds[:model],
       messages: [
         { role: "system", content: "You are a sentiment analyst. Output ONLY JSON." },
-        { role: "user", content: prompt_text }
+        { role: "user", content: prompt_text(specific_context) }
       ]
     }
     make_request(uri, payload, "Bearer #{@creds[:api_key]}")
@@ -121,8 +109,8 @@ class SentimentAnalyzerService
     end
   end
 
-  def prompt_text
-    "Analyze sentiment for '#{@trend.name}' given this context: '#{@context}'. " \
+  def prompt_text(specific_context)
+    "Analyze sentiment for '#{@trend.name}' based ONLY on this specific news item: '#{specific_context}'. " \
     "Return JSON: { \"score\": float (-1 to 1), \"intensity\": float (0 to 1), \"reasoning\": \"string\" }"
   end
 end
