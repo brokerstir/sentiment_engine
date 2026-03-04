@@ -1,7 +1,7 @@
 # app/services/trend_context_service.rb
-require 'rss'
-require 'open-uri'
-require 'action_view' # Needed for strip_tags
+require "rss"
+require "open-uri"
+require "action_view" # Needed for strip_tags
 
 class TrendContextService
   # We include this to easily clean HTML from the RSS description

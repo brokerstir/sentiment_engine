@@ -6,7 +6,7 @@ class SentimentAnalyzerService
     context_items = TrendContextService.call(trend.name)
     expected_count = context_items.size
 
-    [:gemini, :grok].each do |provider|
+    [ :gemini, :grok ].each do |provider|
       model_name = Rails.application.credentials.dig(provider, :model)
 
       # Senior Fix: Only skip if the record count matches the context count
@@ -69,10 +69,10 @@ class SentimentAnalyzerService
     # Correct key paths for the specific APIs
     raw_text = if @provider_name == :gemini
                  body.dig("candidates", 0, "content", "parts", 0, "text")
-               else
+    else
                  # Grok/OpenAI format usually uses choices -> message -> content
                  body.dig("choices", 0, "message", "content")
-               end
+    end
 
     return nil if raw_text.blank?
 
@@ -83,7 +83,7 @@ class SentimentAnalyzerService
 
   def post_to_gemini(specific_context)
     uri = URI("https://generativelanguage.googleapis.com/v1beta/models/#{@creds[:model]}:generateContent?key=#{@creds[:api_key]}")
-    payload = { contents: [{ parts: [{ text: prompt_text(specific_context) }] }] }
+    payload = { contents: [ { parts: [ { text: prompt_text(specific_context) } ] } ] }
     make_request(uri, payload)
   end
 
@@ -100,7 +100,7 @@ class SentimentAnalyzerService
   end
 
   def make_request(uri, payload, auth_header = nil)
-    request = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
+    request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
     request["Authorization"] = auth_header if auth_header
     request.body = payload.to_json
 
