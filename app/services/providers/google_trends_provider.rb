@@ -10,7 +10,8 @@ module Providers
       response = URI.open(RSS_URL).read
       feed = RSS::Parser.parse(response)
 
-      feed.items.map do |item|
+      # Use .first(n) to cap the intake, e.g., only the top 5 trends
+      feed.items.first(5).map do |item|
         {
           name: item.title,
           source: "Google Trends"
