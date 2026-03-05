@@ -1,0 +1,13 @@
+<%# app/views/trends/_trend.html.erb %>
+<tr id="<%= dom_id trend %>">
+  <td style="padding: 12px; border: 1px solid #ddd;"><strong><%= trend.name %></strong></td>
+  <td style="padding: 12px; border: 1px solid #ddd;">
+    <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; background: <%= trend.completed? ? '#d4edda' : '#fff3cd' %>">
+      <%= trend.status.upcase %>
+    </span>
+  </td>
+  <td style="padding: 12px; border: 1px solid #ddd;"><%= trend.sentiment_analyses.size %> dots</td>
+  <td style="padding: 12px; border: 1px solid #ddd;">
+    <%= link_to "View Map", trend_path(trend), style: "color: #007bff; text-decoration: none; font-weight: bold;" %>
+  </td>
+</tr>

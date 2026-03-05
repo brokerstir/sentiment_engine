@@ -1,14 +1,44 @@
-<div style="max-width: 1000px; margin: 40px auto; font-family: sans-serif;">
-  <%= link_to "← Back to Trends", trends_path, style: "color: #666; text-decoration: none;" %>
-  
+<div style="max-width: 1000px; margin: 40px auto; font-family: sans-serif;"> <%= link_to "← Back to Trends", trends_path, style: "color: #666; text-decoration: none;" %>
+
   <h2 style="margin-top: 20px;"><%= @trend.name %>: AI Sentiment Consensus</h2>
-  
+
   <div style="background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <canvas id="sentimentChart" height="450"></canvas>
+  </div> <div style="margin-top: 50px;"> <h3 style="border-bottom: 2px solid #333; padding-bottom: 10px;">AI Reasoning Feed</h3>
+
+    <% @trend.reasoning_groups.each do |group| %>
+      <div style="margin-bottom: 30px; border: 1px solid #eee; border-radius: 8px; overflow: hidden;"> <div style="background: #f9f9f9; padding: 15px; border-bottom: 1px solid #eee;">
+          <a href="<%= group[:url] %>" target="_blank" style="text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.1em;">
+            <%= group[:headline] %>
+          </a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #eee;"> <% [:gemini, :grok].each do |provider| %>
+            <%
+               model_key = Rails.application.credentials.dig(provider, :model)
+               analysis = group[:analyses][model_key]
+            %>
+
+            <div style="background: white; padding: 20px;"> <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <span style="font-weight: bold; text-transform: uppercase; font-size: 0.8em; color: <%= provider == :gemini ? '#4285F4' : '#000' %>">
+                  <%= provider %>
+                </span>
+                <% if analysis %>
+                  <span style="margin-left: auto; font-size: 0.9em; font-family: monospace; background: #f0f0f0; padding: 2px 6px; border-radius: 4px;">
+                    Score: <%= analysis.score %> | Int: <%= analysis.intensity %>
+                  </span>
+                <% end %>
+              </div>
+
+              <% if analysis %>
+                <p style="font-size: 0.95em; line-height: 1.5; color: #444; margin: 0;">"<%= analysis.reasoning %>"</p>
+              <% else %>
+                <p style="font-size: 0.95em; font-style: italic; color: #999;">Analysis pending...</p>
+              <% end %>
+            </div> <% end %>
+        </div> </div> <% end %>
   </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
   // Senior Move: Turbo-specific event listener
@@ -30,6 +60,13 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: (event, elements, chart) => {
+          if (elements.length > 0) {
+            const index = elements[0].datasetIndex;
+            const label = chart.data.datasets[index].label;
+            console.log("User clicked on article: " + label);
+          }
+        },
         scales: {
           x: {
             title: { display: true, text: 'SENTIMENT (Negative ← 0 → Positive)', font: { weight: 'bold' } },

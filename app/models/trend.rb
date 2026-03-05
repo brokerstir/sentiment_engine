@@ -17,4 +17,15 @@ class Trend < ApplicationRecord
       }
     end
   end
+
+  def reasoning_groups
+    # Groups everything by the article so we can compare Gemini vs Grok
+    source_items.includes(:sentiment_analyses).map do |item|
+      {
+        headline: item.headline,
+        url: item.url,
+        analyses: item.sentiment_analyses.index_by(&:llm_model)
+      }
+    end
+  end
 end
