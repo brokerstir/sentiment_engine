@@ -5,15 +5,14 @@ class SentimentAnalyzerService
   def self.call(trend)
     puts "\n[SYSTEM] >>> Starting Trend: #{trend.name} (ID: #{trend.id})"
 
-    # Check if the trend actually exists in DB
     unless Trend.exists?(trend.id)
-      puts "[SYSTEM] ERROR: Trend object passed to Service does not exist in DB!"
+      puts "[SYSTEM] ERROR: Trend #{trend.id} not found in DB."
       return
     end
 
     context_items = TrendContextService.call(trend.name)
     if context_items.empty?
-      puts "[SYSTEM] WARN: No news items found."
+      puts "[SYSTEM] WARN: TrendContextService returned 0 items for '#{trend.name}'"
       return
     end
 
@@ -34,66 +33,64 @@ class SentimentAnalyzerService
   end
 
   def call
-    # DEBUG: Inspect the models at runtime to see what Rails REALLY thinks
-    puts "DEBUG [#{@provider_name}]: SentimentAnalysis Associations: #{SentimentAnalysis.reflect_on_all_associations.map(&:name)}"
-    puts "DEBUG [#{@provider_name}]: SourceItem Associations: #{SourceItem.reflect_on_all_associations.map(&:name)}"
+    # DEBUG: Track specifically how many items we expect vs how many we create
+    puts "DEBUG [#{@provider_name}]: Goal: #{@context_items.size} analyses for Trend #{@trend.id}"
 
     analyzed_ids = @trend.sentiment_analyses
                          .where(llm_model: @creds[:model])
                          .pluck(:source_item_id).to_set
 
     @context_items.each_with_index do |item, idx|
-      puts "DEBUG [#{@provider_name}]: Processing item #{idx + 1}/#{@context_items.size}"
+      source_item = SourceItem.find_or_create_by!(url: item[:url], trend_id: @trend.id) do |si|
+        si.headline = item[:headline]
+      end
 
-      # 1. Surgical SourceItem Check
-      source_item = nil
-      begin
-        source_item = SourceItem.find_or_create_by!(url: item[:url], trend_id: @trend.id) do |si|
-          si.headline = item[:headline]
-        end
-        puts "DEBUG [#{@provider_name}]: SourceItem ID: #{source_item.id} (Trend ID check: #{source_item.trend_id})"
-      rescue => e
-        puts "CRITICAL ERROR [#{@provider_name}] at SourceItem: #{e.message}"
+      if analyzed_ids.include?(source_item.id)
+        puts "DEBUG [#{@provider_name}]: SKIP - Already analyzed Item #{source_item.id}"
         next
       end
 
-      next if analyzed_ids.include?(source_item.id)
-
-      # 2. AI Call
+      # 2. AI Call with explicit response logging
       result = fetch_analysis(item[:summary])
 
       if result
         begin
-          # 3. Surgical SentimentAnalysis Save
-          # We create the object first so we can inspect it before saving
-          analysis = SentimentAnalysis.new(
+          analysis = SentimentAnalysis.create!(
             source_item_id: source_item.id,
             llm_model: @creds[:model],
             score: result["score"],
             intensity: result["intensity"],
             reasoning: result["reasoning"]
           )
-
-          puts "DEBUG [#{@provider_name}]: Analysis Object Ready. valid? #{analysis.valid?}"
-          unless analysis.valid?
-            puts "DEBUG [#{@provider_name}]: Validation Errors: #{analysis.errors.full_messages}"
-          end
-
-          analysis.save!
-          puts "SUCCESS [#{@provider_name}]: Created Analysis ID #{analysis.id}"
+          puts "SUCCESS [#{@provider_name}]: Created Analysis ID #{analysis.id} for SourceItem #{source_item.id}"
         rescue => e
-          puts "CRITICAL ERROR [#{@provider_name}] at SentimentAnalysis: #{e.message}"
-          # If save! fails but valid? was true, something hidden is happening (callbacks, DB constraints)
+          puts "CRITICAL ERROR [#{@provider_name}]: Save failed for SourceItem #{source_item.id}: #{e.message}"
         end
+      else
+        puts "DEBUG [#{@provider_name}]: FAILED - No valid JSON returned from API for Item #{idx + 1}"
       end
     end
+  end
+
+  def self.run_drip
+    # We grab the OLDEST pending trend first to keep things chronological
+    trend = Trend.pending.order(created_at: :asc).first
+    return puts "[DRIP] No pending trends found." unless trend
+
+    puts "[DRIP] Starting analysis for: #{trend.name}"
+    call(trend) # This calls your existing self.call(trend)
   end
 
   private
 
   def fetch_analysis(text)
     response = (@provider_name == :gemini) ? post_to_gemini(text) : post_to_grok(text)
-    return nil unless response.is_a?(Net::HTTPSuccess)
+
+    unless response.is_a?(Net::HTTPSuccess)
+      puts "DEBUG [#{@provider_name}]: HTTP ERROR - Code: #{response.code} | Body: #{response.body.truncate(100)}"
+      return nil
+    end
+
     parse_ai_response(response)
   end
 
@@ -127,9 +124,24 @@ class SentimentAnalyzerService
     raw_text = (@provider_name == :gemini) ?
       body.dig("candidates", 0, "content", "parts", 0, "text") :
       body.dig("choices", 0, "message", "content")
-    return nil if raw_text.blank?
+
+    if raw_text.blank?
+      puts "DEBUG [#{@provider_name}]: PARSE ERROR - API returned empty content"
+      return nil
+    end
+
     json_match = raw_text.match(/\{.*\}/m)
-    json_match ? JSON.parse(json_match[0]) : nil
+    if json_match
+      begin
+        JSON.parse(json_match[0])
+      rescue JSON::ParserError
+        puts "DEBUG [#{@provider_name}]: JSON ERROR - Regex matched but content was invalid JSON: #{json_match[0].truncate(50)}"
+        nil
+      end
+    else
+      puts "DEBUG [#{@provider_name}]: REGEX ERROR - No JSON found in raw text: #{raw_text.truncate(100)}"
+      nil
+    end
   end
 
   def prompt_text(text)

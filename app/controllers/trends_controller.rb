@@ -1,7 +1,7 @@
 class TrendsController < ApplicationController
   def index
     # Only show completed trends to keep the index clean
-    @trends = Trend.completed.order(created_at: :desc)
+    @trends = Trend.completed.order(created_at: :desc).limit(500)
   end
 
   def show

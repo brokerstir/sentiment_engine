@@ -1,6 +1,8 @@
 <div style="max-width: 900px; margin: 40px auto; font-family: sans-serif;">
   <h1 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Sentiment Trends</h1>
 
+  <%= turbo_stream_from "trends" %>
+
   <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
     <thead>
       <tr style="text-align: left; background: #f4f4f4;">
@@ -10,21 +12,29 @@
         <th style="padding: 12px; border: 1px solid #ddd;">Action</th>
       </tr>
     </thead>
-    <tbody>
-      <% @trends.each do |trend| %>
-        <tr>
-          <td style="padding: 12px; border: 1px solid #ddd;"><strong><%= trend.name %></strong></td>
-          <td style="padding: 12px; border: 1px solid #ddd;">
-             <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; background: <%= trend.completed? ? '#d4edda' : '#fff3cd' %>">
-               <%= trend.status.upcase %>
-             </span>
-          </td>
-          <td style="padding: 12px; border: 1px solid #ddd;"><%= trend.sentiment_analyses.size %> dots</td>
-          <td style="padding: 12px; border: 1px solid #ddd;">
-            <%= link_to "View Map", trend_path(trend), style: "color: #007bff; text-decoration: none; font-weight: bold;" %>
-          </td>
-        </tr>
-      <% end %>
+
+    <tbody id="trends_list">
+      <%= render @trends %>
     </tbody>
   </table>
 </div>
+
+<script>
+  // This ensures the logic only runs on the Index page
+  document.addEventListener('turbo:load', function() {
+    // Clear any existing timers to prevent "stacked" refreshes
+    if (window.trendRefreshTimer) clearInterval(window.trendRefreshTimer);
+
+    // Only set the timer if we are actually on the trends list page
+    if (document.getElementById('trends_list')) {
+      window.trendRefreshTimer = setInterval(function() {
+        Turbo.visit(window.location.pathname, { action: "replace" });
+      }, 15000);
+    }
+  });
+
+  // Cleanup when leaving the page so it doesn't fire on the Show page
+  document.addEventListener('turbo:before-visit', function() {
+    if (window.trendRefreshTimer) clearInterval(window.trendRefreshTimer);
+  });
+</script>
