@@ -1,18 +1,20 @@
 import { Controller } from "@hotwired/stimulus"
 import Chart from "chart.js/auto"
 
-console.log("!!! SCRIPT LOADED: sentiment_map_controller.js is executing !!!")
-
 export default class extends Controller {
   static values = { points: Array }
 
+  initialize() {
+    console.log("1. Stimulus: Controller Initialized")
+  }
+
   connect() {
-    console.log("!!! STIMULUS CONNECTED: Element is:", this.element)
-    console.log("!!! DATA POINTS RECEIVED:", this.pointsValue)
+    console.log("2. Stimulus: Controller Connected to:", this.element)
+    console.log("3. Data Points:", this.pointsValue)
 
     const ctx = this.element.getContext('2d')
     if (!ctx) {
-      console.error("!!! ERROR: Could not get 2D context from canvas !!!")
+      console.error("4. Error: Canvas context not found")
       return
     }
 
@@ -23,7 +25,7 @@ export default class extends Controller {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { min: -1, max: 1, title: { display: true, text: 'Score' } },
+          x: { min: -1, max: 1, title: { display: true, text: 'Sentiment' } },
           y: { min: 0, max: 1, title: { display: true, text: 'Intensity' } }
         }
       }
