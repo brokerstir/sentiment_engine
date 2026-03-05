@@ -1,5 +1,5 @@
 class SentimentAnalysis < ApplicationRecord
-  belongs_to :trend
+  belongs_to :source_item
 
   validates :llm_model, :reasoning, presence: true
 
