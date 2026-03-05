@@ -8,7 +8,7 @@ class Trend < ApplicationRecord
     sentiment_analyses.includes(:source_item).map do |sa|
       {
         label: "#{sa.llm_model}: #{sa.source_item.headline.truncate(20)}",
-        data: [{ x: sa.score, y: sa.intensity }],
+        data: [ { x: sa.score, y: sa.intensity } ],
         backgroundColor: sa.llm_model.include?("gemini") ? "rgba(66, 133, 244, 0.7)" : "rgba(0, 0, 0, 0.7)"
       }
     end

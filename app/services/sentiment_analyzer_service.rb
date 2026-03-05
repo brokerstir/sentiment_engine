@@ -17,7 +17,7 @@ class SentimentAnalyzerService
       return
     end
 
-    [:gemini, :grok].each do |provider|
+    [ :gemini, :grok ].each do |provider|
       new(trend, provider, context_items).call
     end
 

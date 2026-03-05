@@ -17,4 +17,3 @@ class SentimentAnalysis < ApplicationRecord
 
   validates :reasoning, presence: true
 end
-
