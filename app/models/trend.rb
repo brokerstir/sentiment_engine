@@ -8,10 +8,10 @@ class Trend < ApplicationRecord
     sentiment_analyses.map do |sa|
       {
         label: "#{sa.llm_model} | #{sa.source_item.headline.truncate(30)}",
-        data: [{ x: sa.score, y: sa.intensity }],
+        data: [ { x: sa.score, y: sa.intensity } ],
         # Gemini Blue vs Grok Black
-        backgroundColor: sa.llm_model.downcase.include?('gemini') ? 'rgba(66, 133, 244, 0.7)' : 'rgba(0, 0, 0, 0.8)',
-        borderColor: sa.llm_model.downcase.include?('gemini') ? '#4285F4' : '#000000',
+        backgroundColor: sa.llm_model.downcase.include?("gemini") ? "rgba(66, 133, 244, 0.7)" : "rgba(0, 0, 0, 0.8)",
+        borderColor: sa.llm_model.downcase.include?("gemini") ? "#4285F4" : "#000000",
         pointRadius: 6,
         pointHoverRadius: 10
       }
