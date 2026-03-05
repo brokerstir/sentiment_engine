@@ -1,0 +1,30 @@
+<div style="max-width: 900px; margin: 40px auto; font-family: sans-serif;">
+  <h1 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Sentiment Trends</h1>
+
+  <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+    <thead>
+      <tr style="text-align: left; background: #f4f4f4;">
+        <th style="padding: 12px; border: 1px solid #ddd;">Name</th>
+        <th style="padding: 12px; border: 1px solid #ddd;">Status</th>
+        <th style="padding: 12px; border: 1px solid #ddd;">Analyses</th>
+        <th style="padding: 12px; border: 1px solid #ddd;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @trends.each do |trend| %>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #ddd;"><strong><%= trend.name %></strong></td>
+          <td style="padding: 12px; border: 1px solid #ddd;">
+             <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; background: <%= trend.completed? ? '#d4edda' : '#fff3cd' %>">
+               <%= trend.status.upcase %>
+             </span>
+          </td>
+          <td style="padding: 12px; border: 1px solid #ddd;"><%= trend.sentiment_analyses.size %> dots</td>
+          <td style="padding: 12px; border: 1px solid #ddd;">
+            <%= link_to "View Map", trend_path(trend), style: "color: #007bff; text-decoration: none; font-weight: bold;" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
