@@ -10,16 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_03_051936) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_05_060728) do
   create_table "sentiment_analyses", force: :cascade do |t|
-    t.bigint "trend_id", null: false
     t.string "llm_model"
     t.float "score"
     t.text "reasoning"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.float "intensity"
-    t.index ["trend_id"], name: "index_sentiment_analyses_on_trend_id"
+    t.integer "source_item_id", null: false
+    t.index ["source_item_id"], name: "index_sentiment_analyses_on_source_item_id"
+  end
+
+  create_table "source_items", force: :cascade do |t|
+    t.integer "trend_id", null: false
+    t.string "headline"
+    t.string "url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["trend_id"], name: "index_source_items_on_trend_id"
   end
 
   create_table "trends", force: :cascade do |t|
@@ -30,4 +39,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_03_051936) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["status"], name: "index_trends_on_status"
   end
+
+  add_foreign_key "sentiment_analyses", "source_items"
+  add_foreign_key "source_items", "trends"
 end
