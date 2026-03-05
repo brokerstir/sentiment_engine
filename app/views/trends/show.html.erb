@@ -1,0 +1,56 @@
+<div style="max-width: 1000px; margin: 40px auto; font-family: sans-serif;">
+  <%= link_to "← Back to Trends", trends_path, style: "color: #666; text-decoration: none;" %>
+  
+  <h2 style="margin-top: 20px;"><%= @trend.name %>: AI Sentiment Consensus</h2>
+  
+  <div style="background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    <canvas id="sentimentChart" height="450"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  // Senior Move: Turbo-specific event listener
+  document.addEventListener('turbo:load', function() {
+    const canvas = document.getElementById('sentimentChart');
+    if (!canvas) return; // Guard clause to prevent errors on other pages
+
+    const ctx = canvas.getContext('2d');
+
+    // Safety check: Destroy existing chart instance if Turbo tries to double-render
+    const existingChart = Chart.getChart("sentimentChart");
+    if (existingChart) {
+      existingChart.destroy();
+    }
+
+    new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets: <%= @trend.chart_data.to_json.html_safe %> },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: { display: true, text: 'SENTIMENT (Negative ← 0 → Positive)', font: { weight: 'bold' } },
+            min: -1, max: 1,
+            grid: { color: '#f0f0f0' }
+          },
+          y: {
+            title: { display: true, text: 'INTENSITY (Apathy ← 0.5 → Passion)', font: { weight: 'bold' } },
+            min: 0, max: 1,
+            grid: { color: '#f0f0f0' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context) => context.dataset.label
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
