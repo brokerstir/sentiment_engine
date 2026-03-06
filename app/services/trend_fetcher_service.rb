@@ -1,6 +1,8 @@
 class TrendFetcherService
   PROVIDERS = [
     Providers::GoogleTrendsProvider.new
+    Providers::RedditTrendsProvider.new
+    Providers::HackerNewsTrendsProvider.new
   ]
 
   # Practical limit for the lookup guard

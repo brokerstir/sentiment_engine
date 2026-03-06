@@ -28,7 +28,7 @@ module Providers
           ).read
 
           feed = RSS::Parser.parse(response, false)
-          items = feed.items.first(8) # Auditing top 8 per category
+          items = feed.items.first(7) # Auditing top 8 per category
           puts " Found #{items.size} headlines."
 
           category_trends = items.map do |item|
