@@ -3,16 +3,20 @@ require "json"
 
 class SentimentAnalyzerService
   def self.call(trend)
-    puts "\n[SYSTEM] >>> Starting Trend: #{trend.name} (ID: #{trend.id})"
+    puts "\n[SYSTEM] >>> Starting Trend: #{trend.name} (ID: #{trend.id} | Source: #{trend.source_provider})"
 
     unless Trend.exists?(trend.id)
       puts "[SYSTEM] ERROR: Trend #{trend.id} not found in DB."
       return
     end
 
-    context_items = TrendContextService.call(trend.name)
+    # PASSING THE TREND OBJECT: This triggers the Isolated Strategy (G, R, or HN)
+    context_items = TrendContextService.call(trend)
+
     if context_items.empty?
       puts "[SYSTEM] WARN: TrendContextService returned 0 items for '#{trend.name}'"
+      # We mark as completed even if empty so it doesn't get stuck in the 'pending' loop
+      trend.completed!
       return
     end
 
@@ -33,7 +37,6 @@ class SentimentAnalyzerService
   end
 
   def call
-    # DEBUG: Track specifically how many items we expect vs how many we create
     puts "DEBUG [#{@provider_name}]: Goal: #{@context_items.size} analyses for Trend #{@trend.id}"
 
     analyzed_ids = @trend.sentiment_analyses
@@ -41,6 +44,7 @@ class SentimentAnalyzerService
                          .pluck(:source_item_id).to_set
 
     @context_items.each_with_index do |item, idx|
+      # find_or_create_by! ensures we don't duplicate context across Gemini/Grok runs
       source_item = SourceItem.find_or_create_by!(url: item[:url], trend_id: @trend.id) do |si|
         si.headline = item[:headline]
       end
@@ -50,9 +54,8 @@ class SentimentAnalyzerService
         next
       end
 
-      # 2. AI Call with explicit response logging
+      # The LLM analysis call
       result = fetch_analysis(item[:summary])
-
 
       if result
         begin
@@ -61,7 +64,7 @@ class SentimentAnalyzerService
             llm_model: @creds[:model],
             score: result["score"],
             intensity: result["intensity"],
-            bias: result["bias"], # <--- NEW LINE
+            bias: result["bias"],
             reasoning: result["reasoning"]
           )
           puts "SUCCESS [#{@provider_name}]: Created Analysis ID #{analysis.id} (Bias: #{analysis.bias})"
@@ -73,12 +76,11 @@ class SentimentAnalyzerService
   end
 
   def self.run_drip
-    # We grab the OLDEST pending trend first to keep things chronological
     trend = Trend.pending.order(created_at: :asc).first
     return puts "[DRIP] No pending trends found." unless trend
 
-    puts "[DRIP] Starting analysis for: #{trend.name}"
-    call(trend) # This calls your existing self.call(trend)
+    puts "[DRIP] Processing oldest pending: #{trend.name} (ID: #{trend.id})"
+    call(trend)
   end
 
   private
@@ -97,7 +99,6 @@ class SentimentAnalyzerService
   def post_to_gemini(text)
     uri = URI("https://generativelanguage.googleapis.com/v1beta/models/#{@creds[:model]}:generateContent?key=#{@creds[:api_key]}")
 
-    # For Gemini, we provide the persona as part of the content
     payload = {
       contents: [
         {
@@ -117,7 +118,7 @@ class SentimentAnalyzerService
       messages: [
         {
           role: "system",
-          content: "You are a senior sentiment analyst specialized in political bias (left/right) and emotional intensity. You output ONLY strictly valid JSON."
+          content: "You are a senior sentiment analyst specialized in political bias and emotional intensity. You output ONLY strictly valid JSON."
         },
         { role: "user", content: prompt_text(text) }
       ]
@@ -138,22 +139,15 @@ class SentimentAnalyzerService
       body.dig("candidates", 0, "content", "parts", 0, "text") :
       body.dig("choices", 0, "message", "content")
 
-    if raw_text.blank?
-      puts "DEBUG [#{@provider_name}]: PARSE ERROR - API returned empty content"
-      return nil
-    end
+    return nil if raw_text.blank?
 
     json_match = raw_text.match(/\{.*\}/m)
     if json_match
       begin
         JSON.parse(json_match[0])
       rescue JSON::ParserError
-        puts "DEBUG [#{@provider_name}]: JSON ERROR - Regex matched but content was invalid JSON: #{json_match[0].truncate(50)}"
         nil
       end
-    else
-      puts "DEBUG [#{@provider_name}]: REGEX ERROR - No JSON found in raw text: #{raw_text.truncate(100)}"
-      nil
     end
   end
 

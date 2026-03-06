@@ -12,10 +12,10 @@ module Providers
     # Your expanded 2026 Juice List
     JUICY_KEYWORDS = %w[
       unmask fbi warfare conflict laws compromise protest
-      lawsuit patents epstein
+      lawsuit epstein protests
       ethics surveillance iran ice
-      drowning crisis threat senate potus
-      vulnerability censorship investigation
+      crisis threat senate potus affair
+      censorship investigation arrest
       lawsuit propaganda trump congress war
     ].freeze
 
@@ -30,19 +30,20 @@ module Providers
           response = URI.open(url, "User-Agent" => "Mozilla/5.0", read_timeout: 5).read
           feed = RSS::Parser.parse(response, false)
 
-          items = feed.items.first(30)
+          items = feed.items.first(40)
           puts " Scanned #{items.size} headlines."
 
+          # In app/services/providers/hacker_news_trends_provider.rb
+
           category_trends = items.map do |item|
-            # 1. Strip the leading HN Tags (Show HN:, Ask HN:, Launch HN:)
-            # 2. Strip metadata like (YYYY) or [video]
-            # 3. Clean up leading/trailing whitespace and dashes
             clean_name = item.title
                              .gsub(/^(Show|Ask|Launch)\s+HN:\s+/i, "")
                              .gsub(/\(\d{4}\)/, "")
                              .gsub(/\[video\]/i, "")
+                             .gsub(/\.{2,}/, "") # <--- NEW: Strips 2 or more consecutive dots
                              .strip
-                             .gsub(/^–\s+/, "") # Remove leading dashes from "Show HN: - Name"
+                             .gsub(/^–\s+/, "")
+                             .gsub(/[[:punct:]]+$/, "") # <--- PRO MOVE: Strips any trailing punctuation (!, ?, ., -)
 
             {
               name: clean_name,
