@@ -53,6 +53,7 @@ class SentimentAnalyzerService
       # 2. AI Call with explicit response logging
       result = fetch_analysis(item[:summary])
 
+
       if result
         begin
           analysis = SentimentAnalysis.create!(
@@ -60,14 +61,13 @@ class SentimentAnalyzerService
             llm_model: @creds[:model],
             score: result["score"],
             intensity: result["intensity"],
+            bias: result["bias"], # <--- NEW LINE
             reasoning: result["reasoning"]
           )
-          puts "SUCCESS [#{@provider_name}]: Created Analysis ID #{analysis.id} for SourceItem #{source_item.id}"
+          puts "SUCCESS [#{@provider_name}]: Created Analysis ID #{analysis.id} (Bias: #{analysis.bias})"
         rescue => e
-          puts "CRITICAL ERROR [#{@provider_name}]: Save failed for SourceItem #{source_item.id}: #{e.message}"
+          puts "CRITICAL ERROR [#{@provider_name}]: Save failed: #{e.message}"
         end
-      else
-        puts "DEBUG [#{@provider_name}]: FAILED - No valid JSON returned from API for Item #{idx + 1}"
       end
     end
   end
@@ -96,7 +96,17 @@ class SentimentAnalyzerService
 
   def post_to_gemini(text)
     uri = URI("https://generativelanguage.googleapis.com/v1beta/models/#{@creds[:model]}:generateContent?key=#{@creds[:api_key]}")
-    payload = { contents: [ { parts: [ { text: prompt_text(text) } ] } ] }
+
+    # For Gemini, we provide the persona as part of the content
+    payload = {
+      contents: [
+        {
+          parts: [
+            { text: "System: You are a linguist trained in detecting political bias and emotional intensity. #{prompt_text(text)}" }
+          ]
+        }
+      ]
+    }
     make_request(uri, payload)
   end
 
@@ -105,7 +115,10 @@ class SentimentAnalyzerService
     payload = {
       model: @creds[:model],
       messages: [
-        { role: "system", content: "You are a sentiment analyst. Output ONLY JSON." },
+        {
+          role: "system",
+          content: "You are a senior sentiment analyst specialized in political bias (left/right) and emotional intensity. You output ONLY strictly valid JSON."
+        },
         { role: "user", content: prompt_text(text) }
       ]
     }
@@ -145,7 +158,20 @@ class SentimentAnalyzerService
   end
 
   def prompt_text(text)
-    "Analyze sentiment for '#{@trend.name}' based on: '#{text}'. " \
-    "Return JSON: { \"score\": float, \"intensity\": float, \"reasoning\": \"string\" }"
+    <<~PROMPT
+      You are an expert sentiment and political analyst. Analyze the following text in relation to the trend: "#{@trend.name}".
+
+      TEXT TO ANALYZE: "#{text}"
+
+      CRITERIA:
+      1. Score (-1.0 to 1.0): Negative/Criticism vs. Positive/Praise.
+      2. Intensity (0.0 to 1.0): Emotional heat, passion, or urgency.
+      3. Bias (-1.0 to 1.0): Perspective alignment (-1.0: Anti-Establishment/Left, 0.0: Neutral, 1.0: Pro-Establishment/Right).
+      4. Reasoning (Holistic): Synthesize how the language, tone, and perspective justify the scores above.
+
+      OUTPUT INSTRUCTIONS:
+      Return ONLY valid JSON. Constraint: "reasoning" must be 2-3 concise sentences (max 120 words).
+      Format: { "score": float, "intensity": float, "bias": float, "reasoning": "string" }
+    PROMPT
   end
 end
