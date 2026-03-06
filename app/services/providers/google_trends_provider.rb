@@ -7,8 +7,8 @@ module Providers
     # These are the high-intensity 2026 Topic Tokens
     TOPICS = {
       us_news:  "CAAqIggKIhxDQkFTRHdvSkwyMHZNRGxqTjNjd0VnSmxiaWdBUAE",
-      world:    "CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pWVXlnQVAB",
-      health:   "CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtVnVLQUFQAQ"
+      world:    "CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pWVXlnQVAB"
+      # health:   "CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtVnVLQUFQAQ"
     }
 
     def fetch
@@ -28,7 +28,7 @@ module Providers
           ).read
 
           feed = RSS::Parser.parse(response, false)
-          items = feed.items.first(8) # Auditing top 8 per category
+          items = feed.items.first(3) # Auditing top 8 per category
           puts " Found #{items.size} headlines."
 
           category_trends = items.map do |item|

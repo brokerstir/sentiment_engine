@@ -15,5 +15,10 @@ class SentimentAnalysis < ApplicationRecord
     less_than_or_equal_to: 1.0
   }
 
+  validates :bias, numericality: {
+    greater_than_or_equal_to: -1.0,
+    less_than_or_equal_to: 1.0
+  }, allow_nil: true
+
   validates :reasoning, presence: true
 end

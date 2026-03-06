@@ -13,16 +13,11 @@ module Providers
       feed = RSS::Parser.parse(response)
       sanitizer = Rails::Html::FullSanitizer.new
 
-      feed.items.first(5).map do |item|
-        # 1. Clean the title object into a plain string
+      feed.items.first(3).map do |item| # Bumping to 10 for better variety
         raw_title = sanitizer.sanitize(item.title.to_s)
-
-        # 2. Extract a "Punchy" 1-3 word name
         punchy_name = extract_punchy_name(raw_title)
 
-        puts "---"
-        puts "RAW: #{raw_title.truncate(50)}"
-        puts "CLEAN: #{punchy_name}"
+        puts "   >> [Reddit Match] #{punchy_name}"
 
         {
           name: punchy_name,
@@ -40,12 +35,15 @@ module Providers
       # 1. Kill the Reddit Meta-trash
       text = text.gsub(/(\/r\/WorldNews|Live Thread|Discussion Thread|Thread #\d+|:)/i, "").strip
 
-      # 2. Clean up leading/trailing punctuation (like those ‘ quotes)
+      # 2. Nuke the trailing dots (2 or more) and trailing punctuation
+      # This fixes the "Swarm - Program a colony... " issue
+      text = text.gsub(/\.{2,}/, "").gsub(/[[:punct:]]+$/, "").strip
+
+      # 3. Clean up leading/trailing quotes
       text = text.gsub(/^[‘'"]|[’'"]$/, "").strip
 
-      # 3. Take up to 60 chars, but don't slice a word in half
-      # This feels more "Newsworthy" than 3 random words.
-      text.truncate(30, separator: /\s/)
+      # 4. Truncate to a solid, searchable length
+      text.truncate(60, separator: /\s/, omission: "")
     end
   end
 end
