@@ -1,93 +1,163 @@
-<div style="max-width: 1000px; margin: 40px auto; font-family: sans-serif;"> <%= link_to "← Back to Trends", trends_path, style: "color: #666; text-decoration: none;" %>
+<div style="max-width: 1000px; margin: 40px auto; font-family: sans-serif; color: #333;">
+  <%= link_to "← Back to Trends", trends_path, style: "color: #666; text-decoration: none; font-weight: bold;" %>
 
-  <h2 style="margin-top: 20px;"><%= @trend.name %>: AI Sentiment Consensus</h2>
+  <h2 style="margin-top: 20px; font-size: 1.8em;"><%= @trend.name %></h2>
+  <p style="color: #888; margin-bottom: 30px;">Source Origin: <%= @trend.source_provider.titleize %></p>
 
-  <div style="background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-    <canvas id="sentimentChart" height="450"></canvas>
-  </div> <div style="margin-top: 50px;"> <h3 style="border-bottom: 2px solid #333; padding-bottom: 10px;">AI Reasoning Feed</h3>
+  <div style="background: white; border: 1px solid #ddd; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+      <span style="font-size: 0.75em; font-weight: bold; text-transform: uppercase; color: #aaa; white-space: nowrap;">Filters:</span>
+      <div id="chartFilters" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; white-space: nowrap; -webkit-overflow-scrolling: touch;">
+        </div>
+    </div>
+
+    <div style="height: 480px; position: relative;">
+      <canvas id="sentimentChart"></canvas>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 0.8em; color: #999; font-style: italic;">
+      <span>Bubble Size = Emotional Intensity (Heat)</span>
+      <span>Click chips to toggle specific articles</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 60px;">
+    <h3 style="border-bottom: 3px solid #333; padding-bottom: 10px; margin-bottom: 30px;">AI Reasoning Deep-Dive</h3>
 
     <% @trend.reasoning_groups.each do |group| %>
-      <div style="margin-bottom: 30px; border: 1px solid #eee; border-radius: 8px; overflow: hidden;"> <div style="background: #f9f9f9; padding: 15px; border-bottom: 1px solid #eee;">
-          <a href="<%= group[:url] %>" target="_blank" style="text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.1em;">
-            <%= group[:headline] %>
+      <div style="margin-bottom: 40px; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+
+        <div style="background: #f8f9fa; padding: 18px; border-bottom: 1px solid #eee;">
+          <a href="<%= group[:url] %>" target="_blank" style="text-decoration: none; color: #0056b3; font-weight: 700; font-size: 1.15em; line-height: 1.3;">
+            <%= group[:headline] %> ↗
           </a>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #eee;"> <% [:gemini, :grok].each do |provider| %>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #eee;">
+          <% [:gemini, :grok].each do |provider| %>
             <%
                model_key = Rails.application.credentials.dig(provider, :model)
                analysis = group[:analyses][model_key]
             %>
 
-            <div style="background: white; padding: 20px;"> <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                <span style="font-weight: bold; text-transform: uppercase; font-size: 0.8em; color: <%= provider == :gemini ? '#4285F4' : '#000' %>">
+            <div style="background: white; padding: 22px; display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <span style="font-weight: 900; text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.05em; color: <%= provider == :gemini ? '#4285F4' : '#000' %>">
                   <%= provider %>
                 </span>
                 <% if analysis %>
-                  <span style="margin-left: auto; font-size: 0.9em; font-family: monospace; background: #f0f0f0; padding: 2px 6px; border-radius: 4px;">
-                    Score: <%= analysis.score %> | Int: <%= analysis.intensity %>
+                  <span style="margin-left: auto; font-size: 0.75em; font-family: 'Courier New', monospace; background: #f0f0f0; border: 1px solid #ddd; padding: 3px 8px; border-radius: 6px;">
+                    B: <%= analysis.bias %> | S: <%= analysis.score %> | I: <%= analysis.intensity %>
                   </span>
                 <% end %>
               </div>
 
               <% if analysis %>
-                <p style="font-size: 0.95em; line-height: 1.5; color: #444; margin: 0;">"<%= analysis.reasoning %>"</p>
+                <p style="font-size: 0.98em; line-height: 1.6; color: #333; margin: 0; font-style: italic;">
+                  "<%= analysis.reasoning %>"
+                </p>
               <% else %>
-                <p style="font-size: 0.95em; font-style: italic; color: #999;">Analysis pending...</p>
+                <p style="font-size: 0.9em; font-style: italic; color: #bbb;">Analysis still in pipeline...</p>
               <% end %>
-            </div> <% end %>
-        </div> </div> <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
 
+
+
 <script>
-  // Senior Move: Turbo-specific event listener
   document.addEventListener('turbo:load', function() {
     const canvas = document.getElementById('sentimentChart');
-    if (!canvas) return; // Guard clause to prevent errors on other pages
+    if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-
-    // Safety check: Destroy existing chart instance if Turbo tries to double-render
     const existingChart = Chart.getChart("sentimentChart");
-    if (existingChart) {
-      existingChart.destroy();
-    }
+    if (existingChart) { existingChart.destroy(); }
 
-    new Chart(ctx, {
+    const rawData = <%= @trend.chart_data.to_json.html_safe %>;
+
+    const chart = new Chart(ctx, {
       type: 'scatter',
-      data: { datasets: <%= @trend.chart_data.to_json.html_safe %> },
+      data: { datasets: rawData },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        onClick: (event, elements, chart) => {
-          if (elements.length > 0) {
-            const index = elements[0].datasetIndex;
-            const label = chart.data.datasets[index].label;
-            console.log("User clicked on article: " + label);
-          }
-        },
         scales: {
           x: {
-            title: { display: true, text: 'SENTIMENT (Negative ← 0 → Positive)', font: { weight: 'bold' } },
+            title: { display: true, text: 'POLITICAL BIAS (← Left | Neutral | Right →)', font: { weight: 'bold' } },
             min: -1, max: 1,
-            grid: { color: '#f0f0f0' }
+            grid: {
+              color: (c) => c.tick.value === 0 ? '#333' : '#eee',
+              lineWidth: (c) => c.tick.value === 0 ? 2 : 1
+            }
           },
           y: {
-            title: { display: true, text: 'INTENSITY (Apathy ← 0.5 → Passion)', font: { weight: 'bold' } },
-            min: 0, max: 1,
-            grid: { color: '#f0f0f0' }
+            title: { display: true, text: 'SENTIMENT SCORE (← Criticism | Neutral | Praise →)', font: { weight: 'bold' } },
+            min: -1, max: 1,
+            grid: {
+              color: (c) => c.tick.value === 0 ? '#333' : '#eee',
+              lineWidth: (c) => c.tick.value === 0 ? 2 : 1
+            }
           }
         },
         plugins: {
           legend: { display: false },
           tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#000',
+            bodyColor: '#333',
+            borderColor: '#ddd',
+            borderWidth: 1,
+            padding: 12,
             callbacks: {
-              label: (context) => context.dataset.label
+              label: (ctx) => {
+                const d = ctx.raw;
+                return [
+                  ctx.dataset.label,
+                  `Bias (X): ${d.x}`,
+                  `Sentiment (Y): ${d.y}`,
+                  `Heat (Size): ${d.intensity}`
+                ];
+              }
             }
           }
         }
       }
     });
+
+    // Build Custom Chip Toolbar
+    const filterContainer = document.getElementById('chartFilters');
+    if (filterContainer) {
+      filterContainer.innerHTML = '';
+      rawData.forEach((dataset, index) => {
+        const chip = document.createElement('div');
+        Object.assign(chip.style, {
+          padding: '5px 14px',
+          borderRadius: '25px',
+          fontSize: '11px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          border: `2px solid ${dataset.borderColor}`,
+          backgroundColor: dataset.backgroundColor,
+          color: dataset.borderColor === '#000000' ? '#fff' : '#000',
+          transition: '0.2s'
+        });
+
+        chip.innerText = dataset.label;
+        chip.onclick = () => {
+          const meta = chart.getDatasetMeta(index);
+          meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+          chip.style.opacity = meta.hidden ? '0.2' : '1';
+          chip.style.filter = meta.hidden ? 'grayscale(1)' : 'none';
+          chart.update();
+        };
+        filterContainer.appendChild(chip);
+      });
+    }
   });
 </script>

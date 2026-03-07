@@ -9,14 +9,12 @@ module Providers
       ask_hn:     "https://hnrss.org/ask"
     }.freeze
 
-    # Your expanded 2026 Juice List
+    # Word-boundary safe keywords
     JUICY_KEYWORDS = %w[
-      unmask fbi warfare conflict laws compromise protest
-      lawsuit epstein protests
-      ethics surveillance iran ice
-      crisis threat senate potus affair
-      censorship investigation arrest
-      lawsuit propaganda trump congress war
+      unmask fbi warfare laws protest lawsuit epstein ethics
+      surveillance iran ice crisis threat senate potus affair
+      censorship investigation arrest propaganda trump war
+      program computer data encryption blockchain
     ].freeze
 
     def fetch
@@ -29,21 +27,20 @@ module Providers
         begin
           response = URI.open(url, "User-Agent" => "Mozilla/5.0", read_timeout: 5).read
           feed = RSS::Parser.parse(response, false)
-
-          items = feed.items.first(40)
+          items = feed.items.first(70) # Scanned more to find matches
           puts " Scanned #{items.size} headlines."
 
-          # In app/services/providers/hacker_news_trends_provider.rb
-
           category_trends = items.map do |item|
-            clean_name = item.title
-                             .gsub(/^(Show|Ask|Launch)\s+HN:\s+/i, "")
+            # 1. Handle both literal dots and the single-character ellipsis (…)
+            name = item.title.to_s.gsub(/(\.{3,}|…)$/, "").strip
+
+            # 2. Strip HN Tags and formatting
+            clean_name = name.gsub(/^(Show|Ask|Launch)\s+HN:\s+/i, "")
                              .gsub(/\(\d{4}\)/, "")
                              .gsub(/\[video\]/i, "")
-                             .gsub(/\.{2,}/, "") # <--- NEW: Strips 2 or more consecutive dots
-                             .strip
                              .gsub(/^–\s+/, "")
-                             .gsub(/[[:punct:]]+$/, "") # <--- PRO MOVE: Strips any trailing punctuation (!, ?, ., -)
+                             .gsub(/[[:punct:]]+$/, "") # Strip trailing punctuation
+                             .strip
 
             {
               name: clean_name,
@@ -56,12 +53,17 @@ module Providers
         end
       end
 
-      # Filter by the Juice List
+      # THE FIX: Match whole words only to prevent "colony" matching "laws"
+      # And ensure name isn't empty after sanitization
       results = all_trends.select do |trend|
-        JUICY_KEYWORDS.any? { |word| trend[:name].downcase.include?(word) }
+        next false if trend[:name].blank?
+
+        # Regex \b ensures we match "war" but not "software"
+        JUICY_KEYWORDS.any? do |word|
+          trend[:name].downcase =~ /\b#{Regexp.escape(word)}\b/
+        end
       end
 
-      # Unique by name
       final_results = results.uniq { |t| t[:name].downcase }
 
       final_results.each do |t|
