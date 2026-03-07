@@ -2,9 +2,9 @@
 class TrendFetcherService
   # Key-Value mapping to tag the origin
   PROVIDERS = {
-    google: Providers::GoogleTrendsProvider.new,
-    reddit: Providers::RedditTrendsProvider.new,
-    hacker_news: Providers::HackerNewsTrendsProvider.new
+    google: Providers::GoogleTrendsProvider.new
+    # reddit: Providers::RedditTrendsProvider.new
+    # hacker_news: Providers::HackerNewsTrendsProvider.new
   }
 
   LOOKUP_LIMIT = 300
