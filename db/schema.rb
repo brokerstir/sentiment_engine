@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_07_062624) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_07_102920) do
   create_table "sentiment_analyses", force: :cascade do |t|
     t.string "llm_model"
     t.float "score"
@@ -45,6 +45,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_07_062624) do
     t.float "grok_avg_bias", default: 0.0
     t.float "grok_avg_intensity", default: 0.0
     t.float "grok_avg_score", default: 0.0
+    t.float "gemini_net_bias", default: 0.0
+    t.float "grok_net_bias", default: 0.0
+    t.float "bias_disagreement", default: 0.0
     t.index ["status"], name: "index_trends_on_status"
   end
 

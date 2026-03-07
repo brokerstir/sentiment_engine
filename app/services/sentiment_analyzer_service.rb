@@ -59,15 +59,19 @@ class SentimentAnalyzerService
       # 1. BIAS AVERAGE (The "Juice"): We use Absolute Values so opposites don't cancel out
       avg_bias = data.map { |a| a.bias.to_f.abs }.sum / data.size
 
-      # 2. INTENSITY AVERAGE: Measuring the raw emotional heat
+      # 2. NET BIAS (Directional): Raw averages to see the actual lean (-1 to 1)
+      net_bias = data.map { |a| a.bias.to_f }.sum / data.size
+
+      # 3. INTENSITY AVERAGE: Measuring the raw emotional heat
       avg_intensity = data.map { |a| a.intensity.to_f }.sum / data.size
 
-      # 3. SCORE AVERAGE: Measuring the general sentiment (Positive vs Negative)
+      # 4. SCORE AVERAGE: Measuring the general sentiment (Positive vs Negative)
       avg_score = data.map { |a| a.score.to_f }.sum / data.size
 
       # Store results for this specific provider
       stats[provider_key] = {
         bias: avg_bias,
+        net_bias: net_bias,
         intensity: avg_intensity,
         score: avg_score,
         count: data.size
@@ -76,27 +80,38 @@ class SentimentAnalyzerService
       # CLEAR LOGGING: Distinctly labeling Grok vs Gemini averages
       label = provider_key.to_s.upcase
       puts "DEBUG [HeatGuard]: #{label} AVERAGES -> " \
-           "Bias: #{avg_bias.round(4)} | " \
+           "Bias Heat: #{avg_bias.round(4)} | " \
+           "Net Lean: #{net_bias.round(4)} | " \
            "Intensity: #{avg_intensity.round(4)} | " \
            "Score: #{avg_score.round(4)} | " \
            "Samples: #{data.size}"
     end
 
-    # PERSISTENCE: Mapping the stats hash directly to the new Trend columns
+    # --- CALCULATE DISAGREEMENT (Consensus Spread) ---
+    g_net = stats.dig(:gemini, :net_bias) || 0.0
+    x_net = stats.dig(:grok, :net_bias) || 0.0
+    disagreement = (g_net - x_net).abs
+
+    # PERSISTENCE: Mapping the stats hash directly to the updated Trend columns
     trend.update(
       gemini_avg_bias:      stats.dig(:gemini, :bias) || 0.0,
+      gemini_net_bias:      g_net,
       gemini_avg_intensity: stats.dig(:gemini, :intensity) || 0.0,
       gemini_avg_score:     stats.dig(:gemini, :score) || 0.0,
 
       grok_avg_bias:        stats.dig(:grok, :bias) || 0.0,
+      grok_net_bias:        x_net,
       grok_avg_intensity:   stats.dig(:grok, :intensity) || 0.0,
-      grok_avg_score:       stats.dig(:grok, :score) || 0.0
+      grok_avg_score:       stats.dig(:grok, :score) || 0.0,
+
+      bias_disagreement:    disagreement
     )
 
     # Simplified Debug Log for the new structure
     puts "DEBUG [HeatGuard]: Trend #{trend.id} updated with dual-provider averages."
-    puts "DEBUG [HeatGuard]: Gemini -> B: #{trend.gemini_avg_bias.round(3)} | I: #{trend.gemini_avg_intensity.round(3)}"
-    puts "DEBUG [HeatGuard]: Grok   -> B: #{trend.grok_avg_bias.round(3)}   | I: #{trend.grok_avg_intensity.round(3)}"
+    puts "DEBUG [HeatGuard]: Gemini -> B: #{trend.gemini_avg_bias.round(3)} | Net: #{trend.gemini_net_bias.round(3)}"
+    puts "DEBUG [HeatGuard]: Grok   -> B: #{trend.grok_avg_bias.round(3)}   | Net: #{trend.grok_net_bias.round(3)}"
+    puts "DEBUG [HeatGuard]: Consensus Disagreement: #{trend.bias_disagreement.round(4)}"
 
     true
   end
