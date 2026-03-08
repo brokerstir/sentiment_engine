@@ -1,13 +1,67 @@
-<%# app/views/trends/_trend.html.erb %>
-<tr id="<%= dom_id trend %>">
-  <td style="padding: 12px; border: 1px solid #ddd;"><strong><%= trend.name %></strong></td>
-  <td style="padding: 12px; border: 1px solid #ddd;">
-    <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; background: <%= trend.completed? ? '#d4edda' : '#fff3cd' %>">
-      <%= trend.status.upcase %>
+<%
+  d_score = trend.bias_disagreement || 0
+
+  status, color_set = case
+    when d_score < 0.15   then ["Consensus", ["#e8f5e9", "#2e7d32"]]
+    when d_score < 0.6    then ["Minor Dissent", ["#e0f7fa", "#00838f"]]
+    when d_score < 1.2    then ["Contradiction", ["#fff3e0", "#ef6c00"]]
+    else ["Polarized", ["#ffebee", "#c62828"]]
+  end
+
+  bg_color, text_color = color_set
+  max_int = [trend.gemini_avg_intensity.to_f, trend.grok_avg_intensity.to_f].max || 0
+%>
+
+<%= link_to trend_path(trend), class: "trend-card", id: dom_id(trend) do %>
+  <div style="flex-grow: 1;">
+    <div class="badge" style="background-color: <%= bg_color %>; color: <%= text_color %>;">
+      <%= status %>
+    </div>
+
+    <h2 class="trend-title"><%= trend.name %></h2>
+
+    <p style="font-size: 0.8em; color: #777; margin: 0;">
+      Source: <%= trend.source_provider.to_s.titleize %>
+    </p>
+  </div>
+
+  <div class="metric-row">
+    <div>
+      <div class="heat-label">Intensity Heat</div>
+      <div class="heat-bar-container">
+        <div class="heat-bar-fill" style="width: <%= max_int * 100 %>%"></div>
+      </div>
+    </div>
+
+    <div style="text-align: right; min-width: 100px;">
+      <div class="heat-label">Model Friction</div>
+
+      <div style="font-weight: 900; font-size: 1.1em; color: <%= text_color %>; display: flex; align-items: baseline; justify-content: flex-end; gap: 2px;">
+        <%= d_score.round(2) %>
+        <span style="font-size: 0.6em; color: #bbb; font-weight: 400;">/ 2.0</span>
+      </div>
+
+      <div style="height: 4px; width: 100%; background: #eee; border-radius: 2px; margin-top: 4px; position: relative;">
+        <div style="
+          position: absolute;
+          left: <%= (d_score / 2.0 * 100).clamp(0, 100) %>%;
+          top: -2px;
+          width: 8px;
+          height: 8px;
+          background: <%= text_color %>;
+          border-radius: 50%;
+          border: 1.5px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+          transform: translateX(-50%);
+          transition: left 0.5s ease-out;
+        "></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-button">
+    <span class="cta-text">
+      View 2D Sentiment Map <span style="margin-left: 5px;">→</span>
     </span>
-  </td>
-  <td style="padding: 12px; border: 1px solid #ddd;"><%= trend.sentiment_analyses.size %> dots</td>
-  <td style="padding: 12px; border: 1px solid #ddd;">
-    <%= link_to "View Map", trend_path(trend), style: "color: #007bff; text-decoration: none; font-weight: bold;" %>
-  </td>
-</tr>
+  </div>
+<% end %>

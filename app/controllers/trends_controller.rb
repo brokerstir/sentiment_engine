@@ -1,7 +1,10 @@
 class TrendsController < ApplicationController
   def index
-    # Only show completed trends to keep the index clean
-    @trends = Trend.completed.order(created_at: :desc).limit(500)
+    # Filter: Only show trends where the AI models actually have something to fight about.
+    @trends = Trend.completed
+                   .where("bias_disagreement >= ?", 0.13)
+                   .order(created_at: :desc)
+                   .limit(500)
   end
 
   def show
