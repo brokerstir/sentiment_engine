@@ -28,13 +28,13 @@ module Providers
           ).read
 
           feed = RSS::Parser.parse(response, false)
-          items = feed.items.first(5) # Auditing top 8 per category
+          items = feed.items.first() # Auditing top 8 per category
           puts " Found #{items.size} headlines."
 
           category_trends = items.map do |item|
             # We want short, searchable trend names.
-            # We take the first 4 words and strip the trailing ' - Source Name'
-            trend_name = item.title.gsub(/ - .*/, "").split(" ").first(5).join(" ").strip
+            # We take the first 7 words and strip the trailing ' - Source Name'
+            trend_name = item.title.gsub(/ - .*/, "").split(" ").first(7).join(" ").strip
 
             puts "   >> [#{label.to_s.titleize}] #{trend_name}"
             {
