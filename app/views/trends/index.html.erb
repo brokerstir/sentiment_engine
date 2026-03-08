@@ -148,6 +148,28 @@
   .trend-card:active .cta-button {
     transform: scale(0.98);
   }
+
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
+  .filter-chip {
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75em;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 2px solid #eee;
+    color: #666;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .filter-chip:hover { border-color: #333; color: #333; }
+  .filter-chip.active { background: #333; border-color: #333; color: #fff; }
 </style>
 
 <div style="max-width: 1100px; margin: 40px auto; padding: 0 20px; font-family: sans-serif;">
@@ -164,6 +186,14 @@
     </div>
   </div>
 
+  <div class="filter-bar">
+    <%= link_to "All", trends_path, class: "filter-chip #{'active' unless params[:filter]}" %>
+    <%= link_to "Consensus", trends_path(filter: 'consensus'), class: "filter-chip #{'active' if params[:filter] == 'consensus'}" %>
+    <%= link_to "Minor Dissent", trends_path(filter: 'dissent'), class: "filter-chip #{'active' if params[:filter] == 'dissent'}" %>
+    <%= link_to "Storng Dissent", trends_path(filter: 'contradiction'), class: "filter-chip #{'active' if params[:filter] == 'contradiction'}" %>
+    <%= link_to "Polarized", trends_path(filter: 'polarized'), class: "filter-chip #{'active' if params[:filter] == 'polarized'}" %>
+  </div>
+
   <%= turbo_stream_from "trends" %>
 
   <div id="trends_list" class="trend-grid">
@@ -174,12 +204,15 @@
 <script>
   document.addEventListener('turbo:load', function() {
     if (window.trendRefreshTimer) clearInterval(window.trendRefreshTimer);
+
     if (document.getElementById('trends_list')) {
       window.trendRefreshTimer = setInterval(function() {
-        Turbo.visit(window.location.pathname, { action: "replace" });
+        // USE .href TO PRESERVE THE ?filter= PARAMETER
+        Turbo.visit(window.location.href, { action: "replace" });
       }, 15000);
     }
   });
+
   document.addEventListener('turbo:before-visit', function() {
     if (window.trendRefreshTimer) clearInterval(window.trendRefreshTimer);
   });

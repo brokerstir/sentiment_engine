@@ -4,7 +4,7 @@
   status, color_set = case
     when d_score < 0.15   then ["Consensus", ["#e8f5e9", "#2e7d32"]]
     when d_score < 0.6    then ["Minor Dissent", ["#e0f7fa", "#00838f"]]
-    when d_score < 1.2    then ["Contradiction", ["#fff3e0", "#ef6c00"]]
+    when d_score < 1.2    then ["Strong Dissent", ["#fff3e0", "#ef6c00"]]
     else ["Polarized", ["#ffebee", "#c62828"]]
   end
 

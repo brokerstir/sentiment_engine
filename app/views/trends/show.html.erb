@@ -1,13 +1,58 @@
 <%
-  # 1. DEFINE LOGIC AT THE TOP: This prevents the 'status' NameError in the head tags
   d_score = @trend.bias_disagreement || 0
   status, status_color = case
     when d_score < 0.15  then ["High Consensus", "#28a745"]
     when d_score < 0.6   then ["Minor Dissent", "#17a2b8"]
-    when d_score < 1.2   then ["Major Contradiction", "#ffc107"]
-    else ["Total Polarization", "#dc3545"]
+    when d_score < 1.2   then ["Strong Dissent", "#ffc107"]
+    else ["Polarized", "#dc3545"]
   end
 %>
+
+<style>
+  /* Base Container */
+  .show-container {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 0 15px; /* Critical for mobile edge-to-edge */
+    font-family: sans-serif;
+    color: #333;
+  }
+
+  /* Responsive Grids */
+  .comparison-grid, .reasoning-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Stacked by default (Mobile First) */
+    gap: 0;
+    background: #eee;
+  }
+
+  /* Desktop View */
+  @media (min-width: 768px) {
+    .show-container { margin: 40px auto; }
+    .comparison-grid, .reasoning-grid {
+      grid-template-columns: 1fr 1fr; /* Side-by-side on Laptop/Tablet */
+    }
+    .provider-panel {
+      border-right: 1px solid #eee;
+    }
+  }
+
+  /* Chart Height Adjustment */
+  .chart-wrapper {
+    height: 300px; /* Shorter for mobile */
+    position: relative;
+  }
+  @media (min-width: 768px) {
+    .chart-wrapper { height: 480px; }
+  }
+
+  .provider-panel {
+    background: #fff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
 
 <% content_for :head do %>
   <meta property="og:type" content="website">
@@ -15,7 +60,6 @@
   <meta property="og:title" content="AI Sentiment: <%= @trend.name %>">
   <meta property="og:description" content="Gemini vs. Grok analysis. Bias Disagreement: <%= d_score.round(2) %> (<%= status %>).">
   <meta property="og:image" content="<%= asset_url('logo.png') rescue '' %>">
-
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="<%= trend_url(@trend) %>">
   <meta name="twitter:title" content="AI Sentiment: <%= @trend.name %>">
@@ -23,138 +67,108 @@
   <meta name="twitter:image" content="<%= asset_url('logo.png') rescue '' %>">
 <% end %>
 
-<div style="max-width: 1000px; margin: 40px auto; font-family: sans-serif; color: #333;">
+<div class="show-container">
   <%= link_to "← Back to Trends", trends_path, style: "color: #666; text-decoration: none; font-weight: bold;" %>
 
-  <h2 style="margin-top: 20px; font-size: 1.8em;"><%= @trend.name %></h2>
-  <p style="color: #888; margin-bottom: 30px;">Source Origin: <%= @trend.source_provider.to_s.titleize %></p>
+  <h2 style="margin-top: 20px; font-size: 1.5em; line-height: 1.2;"><%= @trend.name %></h2>
+  <p style="color: #888; margin-bottom: 25px; font-size: 0.9em;">Source Origin: <%= @trend.source_provider.to_s.titleize %></p>
 
-  <div style="background: white; border: 1px solid #ddd; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+  <div style="background: white; border: 1px solid #ddd; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-      <span style="font-size: 0.75em; font-weight: bold; text-transform: uppercase; color: #aaa; white-space: nowrap;">Filters:</span>
+      <span style="font-size: 0.7em; font-weight: bold; text-transform: uppercase; color: #aaa; white-space: nowrap;">Filters:</span>
       <div id="chartFilters" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; white-space: nowrap; -webkit-overflow-scrolling: touch;"></div>
     </div>
 
-    <div style="height: 480px; position: relative;">
+    <div class="chart-wrapper">
       <canvas id="sentimentChart"></canvas>
     </div>
 
-    <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 0.8em; color: #999; font-style: italic;">
+    <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 15px; font-size: 0.75em; color: #999; font-style: italic;">
       <span>Bubble Size = Emotional Intensity (Heat)</span>
-      <span>Click chips to toggle specific articles</span>
+      <span>Tap chips to toggle specific articles</span>
     </div>
   </div>
 
-  <div style="margin-top: 40px; background: #fff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <div style="background: #333; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-      <h3 style="margin: 0; font-size: 1.1em; letter-spacing: 0.05em; text-transform: uppercase;">Consensus Analysis</h3>
-
-      <span style="background: <%= status_color %>; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold;">
+  <div style="margin-top: 30px; background: #fff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <div style="background: #333; color: #fff; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <h3 style="margin: 0; font-size: 1em; text-transform: uppercase;">Consensus Analysis</h3>
+      <span style="background: <%= status_color %>; color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 0.75em; font-weight: bold;">
         <%= status %> (<%= d_score.round(2) %>)
       </span>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; background: #eee;">
+    <div class="comparison-grid">
       <% [
            { name: 'Gemini', key: 'gemini', color: '#4285F4', net: @trend.gemini_net_bias, heat: @trend.gemini_avg_bias, int: @trend.gemini_avg_intensity, score: @trend.gemini_avg_score },
            { name: 'Grok', key: 'grok', color: '#000', net: @trend.grok_net_bias, heat: @trend.grok_avg_bias, int: @trend.grok_avg_intensity, score: @trend.grok_avg_score }
-         ].each do |p| %>
+         ].each_with_index do |p, i| %>
 
-        <div style="background: #fff; padding: 25px; border-right: <%= p[:key] == 'gemini' ? '1px solid #eee' : 'none' %>;">
-          <div style="display: flex; align-items: center; margin-bottom: 20px;">
-            <div style="width: 12px; height: 12px; border-radius: 50%; background: <%= p[:color] %>; margin-right: 10px;"></div>
-            <strong style="text-transform: uppercase; font-size: 0.9em;"><%= p[:name] %> Average</strong>
+        <div class="provider-panel" style="<%= 'border-bottom: 1px solid #eee;' if i == 0 %>">
+          <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: <%= p[:color] %>; margin-right: 8px;"></div>
+            <strong style="text-transform: uppercase; font-size: 0.8em;"><%= p[:name] %> Average</strong>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
-              <label style="display: block; font-size: 0.7em; color: #999; text-transform: uppercase; font-weight: bold;">Net Lean (X)</label>
-              <span style="font-size: 1.4em; font-weight: 900; color: <%= p[:net] < 0 ? '#dc3545' : (p[:net] > 0 ? '#28a745' : '#333') %>">
+              <label style="display: block; font-size: 0.65em; color: #999; text-transform: uppercase;">Net Lean (X)</label>
+              <span style="font-size: 1.1em; font-weight: 900; color: <%= p[:net] < 0 ? '#dc3545' : (p[:net] > 0 ? '#28a745' : '#333') %>">
                 <%= p[:net] > 0 ? "+" : "" %><%= p[:net].round(2) %>
               </span>
-              <small style="display: block; font-size: 0.65em; color: #aaa;"><%= p[:net] < 0 ? "LEFT / ANTI-EST" : "RIGHT / EST" %></small>
             </div>
-
             <div>
-              <label style="display: block; font-size: 0.7em; color: #999; text-transform: uppercase; font-weight: bold;">Sentiment (Y)</label>
-              <span style="font-size: 1.4em; font-weight: 900;"><%= p[:score].round(2) %></span>
-              <small style="display: block; font-size: 0.65em; color: #aaa;"><%= p[:score] < 0 ? "CRITICAL" : "PRAISING" %></small>
+              <label style="display: block; font-size: 0.65em; color: #999; text-transform: uppercase;">Sentiment (Y)</label>
+              <span style="font-size: 1.1em; font-weight: 900;"><%= p[:score].round(2) %></span>
             </div>
+          </div>
 
-            <div style="margin-top: 10px;">
-              <label style="display: block; font-size: 0.7em; color: #999; text-transform: uppercase; font-weight: bold;">Bias Heat</label>
-              <div style="height: 6px; background: #eee; border-radius: 3px; margin-top: 5px;">
-                <div style="height: 100%; width: <%= p[:heat] * 100 %>%; background: orange; border-radius: 3px;"></div>
-              </div>
-            </div>
-
-            <div style="margin-top: 10px;">
-              <label style="display: block; font-size: 0.7em; color: #999; text-transform: uppercase; font-weight: bold;">Intensity</label>
-              <div style="height: 6px; background: #eee; border-radius: 3px; margin-top: 5px;">
-                <div style="height: 100%; width: <%= p[:int] * 100 %>%; background: red; border-radius: 3px;"></div>
-              </div>
-            </div>
+          <div style="margin-top: 15px;">
+             <label style="display: block; font-size: 0.65em; color: #999; text-transform: uppercase; margin-bottom: 4px;">Bias Heat & Intensity</label>
+             <div style="height: 4px; background: #eee; border-radius: 2px; margin-bottom: 4px;"><div style="height: 100%; width: <%= p[:heat] * 100 %>%; background: orange;"></div></div>
+             <div style="height: 4px; background: #eee; border-radius: 2px;"><div style="height: 100%; width: <%= p[:int] * 100 %>%; background: red;"></div></div>
           </div>
         </div>
       <% end %>
     </div>
   </div>
 
-  <div style="margin-top: 15px; display: flex; align-items: center; gap: 15px; padding: 0 10px;">
-    <span style="font-size: 0.75em; font-weight: bold; text-transform: uppercase; color: #999;">Share Trend:</span>
+  <div style="margin-top: 20px; display: flex; align-items: center; gap: 15px; padding: 10px; background: #f9f9f9; border-radius: 10px; justify-content: center;">
+    <span style="font-size: 0.7em; font-weight: bold; text-transform: uppercase; color: #999;">Share:</span>
 
     <%
+      # DEFINE THESE FIRST
       share_url = trend_url(@trend)
       share_text = "AI Sentiment Analysis for '#{@trend.name}' - Consensus: #{status}"
     %>
 
-    <a href="https://twitter.com/intent/tweet?url=<%= u share_url %>&text=<%= u share_text %>"
-       target="_blank" style="text-decoration: none; color: #000; font-size: 1.2em;" title="Share on X">𝕏</a>
-
-    <a href="https://www.facebook.com/sharer/sharer.php?u=<%= u share_url %>"
-       target="_blank" style="text-decoration: none; color: #1877F2; font-size: 1.2em;" title="Share on Facebook">FB</a>
-
-    <a href="https://www.reddit.com/submit?url=<%= u share_url %>&title=<%= u share_text %>"
-       target="_blank" style="text-decoration: none; color: #FF4500; font-size: 1.2em;" title="Share on Reddit">Reddit</a>
+    <a href="https://twitter.com/intent/tweet?url=<%= u share_url %>&text=<%= u share_text %>" target="_blank" style="text-decoration: none; color: #000; font-size: 1.2em;">𝕏</a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=<%= u share_url %>" target="_blank" style="text-decoration: none; color: #1877F2; font-size: 1.2em;">FB</a>
+    <a href="https://www.reddit.com/submit?url=<%= u share_url %>&title=<%= u share_text %>" target="_blank" style="text-decoration: none; color: #FF4500; font-size: 1.2em;">Reddit</a>
   </div>
 
-  <div style="margin-top: 60px;">
-    <h3 style="border-bottom: 3px solid #333; padding-bottom: 10px; margin-bottom: 30px;">AI Reasoning Deep-Dive</h3>
+  <div style="margin-top: 50px;">
+    <h3 style="border-bottom: 3px solid #333; padding-bottom: 8px; margin-bottom: 25px; font-size: 1.2em;">AI Reasoning Deep-Dive</h3>
 
     <% @trend.reasoning_groups.each do |group| %>
-      <div style="margin-bottom: 40px; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-
-        <div style="background: #f8f9fa; padding: 18px; border-bottom: 1px solid #eee;">
-          <a href="<%= group[:url] %>" target="_blank" style="text-decoration: none; color: #0056b3; font-weight: 700; font-size: 1.15em; line-height: 1.3;">
+      <div style="margin-bottom: 30px; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #eee;">
+          <a href="<%= group[:url] %>" target="_blank" style="text-decoration: none; color: #0056b3; font-weight: 700; font-size: 1em; line-height: 1.3; display: block;">
             <%= group[:headline] %> ↗
           </a>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #eee;">
-          <% [:gemini, :grok].each do |provider| %>
+        <div class="reasoning-grid">
+          <% [:gemini, :grok].each_with_index do |provider, idx| %>
             <%
                model_key = Rails.application.credentials.dig(provider, :model)
                analysis = group[:analyses][model_key]
             %>
-
-            <div style="background: white; padding: 22px; display: flex; flex-direction: column;">
-              <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                <span style="font-weight: 900; text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.05em; color: <%= provider == :gemini ? '#4285F4' : '#000' %>">
-                  <%= provider %>
-                </span>
-                <% if analysis %>
-                  <span style="margin-left: auto; font-size: 0.75em; font-family: 'Courier New', monospace; background: #f0f0f0; border: 1px solid #ddd; padding: 3px 8px; border-radius: 6px;">
-                    B: <%= analysis.bias %> | S: <%= analysis.score %> | I: <%= analysis.intensity %>
-                  </span>
-                <% end %>
-              </div>
-
+            <div class="provider-panel" style="<%= 'border-bottom: 1px solid #eee;' if idx == 0 %>">
+              <span style="font-weight: 900; text-transform: uppercase; font-size: 0.7em; margin-bottom: 8px; color: <%= provider == :gemini ? '#4285F4' : '#000' %>">
+                <%= provider %>
+              </span>
               <% if analysis %>
-                <p style="font-size: 0.98em; line-height: 1.6; color: #333; margin: 0; font-style: italic;">
-                  "<%= analysis.reasoning %>"
-                </p>
-              <% else %>
-                <p style="font-size: 0.9em; font-style: italic; color: #bbb;">Analysis still in pipeline...</p>
+                <p style="font-size: 0.9em; line-height: 1.5; color: #333; margin: 0; font-style: italic;">"<%= analysis.reasoning %>"</p>
               <% end %>
             </div>
           <% end %>
@@ -166,14 +180,28 @@
 
 <script>
   document.addEventListener('turbo:load', function() {
+    console.log("DEBUG [Chart]: Turbo Load Fired");
+
     const canvas = document.getElementById('sentimentChart');
-    if (!canvas) return;
+    if (!canvas) {
+      console.log("DEBUG [Chart]: ERROR - Canvas element 'sentimentChart' not found in DOM");
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
     const existingChart = Chart.getChart("sentimentChart");
-    if (existingChart) { existingChart.destroy(); }
+    if (existingChart) {
+      console.log("DEBUG [Chart]: Destroying existing instance");
+      existingChart.destroy();
+    }
 
+    // Capture data from Ruby
     const rawData = <%= @trend.chart_data.to_json.html_safe %>;
+    console.log("DEBUG [Chart]: Data loaded -", rawData.length, "datasets found");
+
+    if (rawData.length === 0) {
+      console.log("DEBUG [Chart]: WARNING - No sentiment analyses found for this trend.");
+    }
 
     const chart = new Chart(ctx, {
       type: 'scatter',
@@ -183,20 +211,14 @@
         maintainAspectRatio: false,
         scales: {
           x: {
-            title: { display: true, text: 'POLITICAL BIAS (← Left | Neutral | Right →)', font: { weight: 'bold' } },
+            title: { display: true, text: 'BIAS (← Left | Right →)', font: { weight: 'bold', size: 10 } },
             min: -1, max: 1,
-            grid: {
-              color: (c) => c.tick.value === 0 ? '#333' : '#eee',
-              lineWidth: (c) => c.tick.value === 0 ? 2 : 1
-            }
+            grid: { color: (c) => c.tick.value === 0 ? '#333' : '#eee', lineWidth: (c) => c.tick.value === 0 ? 2 : 1 }
           },
           y: {
-            title: { display: true, text: 'SENTIMENT SCORE (← Criticism | Neutral | Praise →)', font: { weight: 'bold' } },
+            title: { display: true, text: 'SENTIMENT (← Critical | Praise →)', font: { weight: 'bold', size: 10 } },
             min: -1, max: 1,
-            grid: {
-              color: (c) => c.tick.value === 0 ? '#333' : '#eee',
-              lineWidth: (c) => c.tick.value === 0 ? 2 : 1
-            }
+            grid: { color: (c) => c.tick.value === 0 ? '#333' : '#eee', lineWidth: (c) => c.tick.value === 0 ? 2 : 1 }
           }
         },
         plugins: {
@@ -207,33 +229,23 @@
             bodyColor: '#333',
             borderColor: '#ddd',
             borderWidth: 1,
-            padding: 12,
-            callbacks: {
-              label: (ctx) => {
-                const d = ctx.raw;
-                return [
-                  ctx.dataset.label,
-                  `Bias (X): ${d.x}`,
-                  `Sentiment (Y): ${d.y}`,
-                  `Heat (Size): ${d.intensity}`
-                ];
-              }
-            }
+            padding: 12
           }
         }
       }
     });
 
-    // Build Custom Chip Toolbar
+    // Rebuild Filter Chips
     const filterContainer = document.getElementById('chartFilters');
-    if (filterContainer) {
+    if (filterContainer && rawData.length > 0) {
+      console.log("DEBUG [Chart]: Building filter chips");
       filterContainer.innerHTML = '';
       rawData.forEach((dataset, index) => {
         const chip = document.createElement('div');
         Object.assign(chip.style, {
-          padding: '5px 14px',
-          borderRadius: '25px',
-          fontSize: '11px',
+          padding: '5px 12px',
+          borderRadius: '20px',
+          fontSize: '10px',
           fontWeight: 'bold',
           cursor: 'pointer',
           border: `2px solid ${dataset.borderColor}`,
