@@ -33,7 +33,7 @@ class TrendContextService
       return []
     end
 
-    final_results = results.uniq { |r| r[:url] }.first(3)
+    final_results = results.uniq { |r| r[:url] }.first(5)
     puts "DEBUG [Context]: SUCCESS - Returning #{final_results.size} items."
     puts "DEBUG [Context]: ------------------------------------------\n"
     final_results

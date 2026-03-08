@@ -1,39 +1,218 @@
-<div style="max-width: 900px; margin: 40px auto; font-family: sans-serif;">
-  <h1 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Sentiment Trends</h1>
+<style>
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 4px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 30px;
+  }
+
+  .battle-title {
+    margin: 0;
+    font-size: 2.8em;
+    font-weight: 900;
+    letter-spacing: -2px;
+    <%# text-transform: uppercase; %>
+  }
+
+  .vs-tag {
+    font-size: 0.35em;
+    letter-spacing: 1px;
+    color: #666;
+    vertical-align: middle;
+    margin-left: 10px;
+    font-weight: 700;
+  }
+
+  .trend-label {
+    font-family: monospace;
+    font-size: 1em;
+    font-weight: 900;
+    text-transform: uppercase;
+    background: #000;
+    color: #fff;
+    padding: 2px 8px;
+  }
+
+  @media (max-width: 650px) {
+    .header-container {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .battle-title { font-size: 2.2em; }
+  }
+
+  .trend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+  }
+  .trend-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .trend-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+    border-color: #bbb;
+  }
+  .trend-title {
+    font-size: 1.2em;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+    color: #1a1a1a;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7em;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+  }
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .heat-label {
+    font-size: 0.7em;
+    color: #999;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .heat-bar-container {
+    width: 100px;
+    height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .heat-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff8a00, #ff2d00);
+  }
+  @media (max-width: 600px) {
+    .trend-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Base state of the button */
+  .cta-button {
+    margin-top: 20px;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px dashed #ddd;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .cta-text {
+    font-size: 0.75em;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: #333;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  /* Hover/Tap State: Triggered when the CARD is hovered */
+  .trend-card:hover .cta-button {
+    background: #333 !important;
+    border: 1px solid #333;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+
+  .trend-card:hover .cta-text {
+    color: #fff !important;
+  }
+
+  /* Mobile: Ensure it feels like a button press on tap */
+  .trend-card:active .cta-button {
+    transform: scale(0.98);
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
+  .filter-chip {
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75em;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 2px solid #eee;
+    color: #666;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .filter-chip:hover { border-color: #333; color: #333; }
+  .filter-chip.active { background: #333; border-color: #333; color: #fff; }
+</style>
+
+<div style="max-width: 1100px; margin: 40px auto; padding: 0 20px; font-family: sans-serif;">
+  <div class="header-container">
+    <div>
+      <h1 class="battle-title">
+        AI Showdown
+        <span class="vs-tag">GEMINI <span style="color: #333;">vs</span> GROK</span>
+      </h1>
+    </div>
+
+    <div style="text-align: right;">
+      <span class="trend-label">News Analysis</span>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <%= link_to "All", trends_path, class: "filter-chip #{'active' unless params[:filter]}" %>
+    <%= link_to "Consensus", trends_path(filter: 'consensus'), class: "filter-chip #{'active' if params[:filter] == 'consensus'}" %>
+    <%= link_to "Minor Dissent", trends_path(filter: 'dissent'), class: "filter-chip #{'active' if params[:filter] == 'dissent'}" %>
+    <%= link_to "Storng Dissent", trends_path(filter: 'contradiction'), class: "filter-chip #{'active' if params[:filter] == 'contradiction'}" %>
+    <%= link_to "Polarized", trends_path(filter: 'polarized'), class: "filter-chip #{'active' if params[:filter] == 'polarized'}" %>
+  </div>
 
   <%= turbo_stream_from "trends" %>
 
-  <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-    <thead>
-      <tr style="text-align: left; background: #f4f4f4;">
-        <th style="padding: 12px; border: 1px solid #ddd;">Name</th>
-        <th style="padding: 12px; border: 1px solid #ddd;">Status</th>
-        <th style="padding: 12px; border: 1px solid #ddd;">Analyses</th>
-        <th style="padding: 12px; border: 1px solid #ddd;">Action</th>
-      </tr>
-    </thead>
-
-    <tbody id="trends_list">
-      <%= render @trends %>
-    </tbody>
-  </table>
+  <div id="trends_list" class="trend-grid">
+    <%= render @trends %>
+  </div>
 </div>
 
 <script>
-  // This ensures the logic only runs on the Index page
   document.addEventListener('turbo:load', function() {
-    // Clear any existing timers to prevent "stacked" refreshes
     if (window.trendRefreshTimer) clearInterval(window.trendRefreshTimer);
 
-    // Only set the timer if we are actually on the trends list page
     if (document.getElementById('trends_list')) {
       window.trendRefreshTimer = setInterval(function() {
-        Turbo.visit(window.location.pathname, { action: "replace" });
+        // USE .href TO PRESERVE THE ?filter= PARAMETER
+        Turbo.visit(window.location.href, { action: "replace" });
       }, 15000);
     }
   });
 
-  // Cleanup when leaving the page so it doesn't fire on the Show page
   document.addEventListener('turbo:before-visit', function() {
     if (window.trendRefreshTimer) clearInterval(window.trendRefreshTimer);
   });
