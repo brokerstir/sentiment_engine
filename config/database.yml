@@ -12,30 +12,16 @@ test:
   database: storage/test.sqlite3
 
 production:
-  # The Primary database (Trends, Analysis)
-  primary:
-    <<: *default
-    url: <%= ENV["libsql://sentiment-engine-prod-robdoestech.aws-us-east-2.turso.io"] %>
-    auth_token: <%= ENV["eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzI0MjcwNjksImlkIjoiMDE5Y2FjZTItOTEwMS03YjFiLWIxNzUtMzExNDE2YjM0YmRjIiwicmlkIjoiYjRmNDUzYmItMjVlMC00ZDQyLWFkM2MtYzRlZTg3NjE4NGFjIn0.LxkVsQloP2c6d3-CbBUMLosxVrJxJAK8ei3gOyQZ3E2mZU8gg9nHfnR6JuWbNZTmEbkMLPoSI9l90hwxpeRfAQ"] %>
-    migrations_paths: db/migrate
-
-  # The "Solid" Trifecta: We store these in Turso too.
-  # This keeps our app "stateless" so if the server restarts,
-  # our cache and background jobs aren't lost.
+  primary: &primary_production
+    adapter: postgresql
+    url: <%= ENV["DATABASE_URL"] %>
+    pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   cache:
-    <<: *default
-    url: <%= ENV["libsql://sentiment-engine-prod-robdoestech.aws-us-east-2.turso.io"] %>
-    auth_token: <%= ENV["eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzI0MjcwNjksImlkIjoiMDE5Y2FjZTItOTEwMS03YjFiLWIxNzUtMzExNDE2YjM0YmRjIiwicmlkIjoiYjRmNDUzYmItMjVlMC00ZDQyLWFkM2MtYzRlZTg3NjE4NGFjIn0.LxkVsQloP2c6d3-CbBUMLosxVrJxJAK8ei3gOyQZ3E2mZU8gg9nHfnR6JuWbNZTmEbkMLPoSI9l90hwxpeRfAQ"] %>
+    <<: *primary_production
     migrations_paths: db/cache_migrate
-
   queue:
-    <<: *default
-    url: <%= ENV["libsql://sentiment-engine-prod-robdoestech.aws-us-east-2.turso.io"] %>
-    auth_token: <%= ENV["eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzI0MjcwNjksImlkIjoiMDE5Y2FjZTItOTEwMS03YjFiLWIxNzUtMzExNDE2YjM0YmRjIiwicmlkIjoiYjRmNDUzYmItMjVlMC00ZDQyLWFkM2MtYzRlZTg3NjE4NGFjIn0.LxkVsQloP2c6d3-CbBUMLosxVrJxJAK8ei3gOyQZ3E2mZU8gg9nHfnR6JuWbNZTmEbkMLPoSI9l90hwxpeRfAQ"] %>
+    <<: *primary_production
     migrations_paths: db/queue_migrate
-
   cable:
-    <<: *default
-    url: <%= ENV["libsql://sentiment-engine-prod-robdoestech.aws-us-east-2.turso.io"] %>
-    auth_token: <%= ENV["eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzI0MjcwNjksImlkIjoiMDE5Y2FjZTItOTEwMS03YjFiLWIxNzUtMzExNDE2YjM0YmRjIiwicmlkIjoiYjRmNDUzYmItMjVlMC00ZDQyLWFkM2MtYzRlZTg3NjE4NGFjIn0.LxkVsQloP2c6d3-CbBUMLosxVrJxJAK8ei3gOyQZ3E2mZU8gg9nHfnR6JuWbNZTmEbkMLPoSI9l90hwxpeRfAQ"] %>
+    <<: *primary_production
     migrations_paths: db/cable_migrate
