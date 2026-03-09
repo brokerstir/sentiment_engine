@@ -257,7 +257,7 @@ class SentimentAnalyzerService
       CRITERIA:
       1. Score (-1.0 to 1.0): Negative/Criticism vs. Positive/Praise.
       2. Intensity (0.0 to 1.0): Emotional heat, passion, or urgency.
-      3. Bias (-1.0 to 1.0): Perspective alignment (-1.0: Anti-Establishment/Left, 0.0: Neutral, 1.0: Pro-Establishment/Right).
+      3. Bias (-1.0 to 1.0): Political alignment (-1.0: Anti-Establishment/Left, 0.0: Neutral, 1.0: Pro-Establishment/Right).
       4. Reasoning (Holistic): Synthesize how the language, tone, and perspective justify the scores above.
 
       OUTPUT INSTRUCTIONS:
