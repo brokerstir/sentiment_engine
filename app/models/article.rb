@@ -4,6 +4,10 @@ class Article < ApplicationRecord
   validates :title, :link, presence: true
   validates :link, uniqueness: true
 
+  def safe_link
+    link.to_s.start_with?(/https?:\/\//) ? link : "#"
+  end
+
   def update_disagreement_score!
     return update_column(:disagreement_score, 0.0) if article_analyses.count < 2
 

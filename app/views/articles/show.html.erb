@@ -36,7 +36,7 @@
       </div>
     </div>
     <div style="margin-top: 20px;">
-      <%= link_to "Read Original Source ↗", @article.link, target: "_blank", class: "trait-badge", style: "text-decoration: none; padding: 8px 16px;" %>
+      <%= link_to "Read Original Source ↗", @article.safe_link, target: "_blank", class: "trait-badge", style: "text-decoration: none; padding: 8px 16px;" %>
     </div>
   </header>
 
