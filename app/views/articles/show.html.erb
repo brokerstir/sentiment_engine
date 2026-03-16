@@ -1,0 +1,197 @@
+<% 
+  article_style = @article.conflict_style 
+  share_url = request.original_url
+  share_text = "AI Battle: Gemini vs Grok on '#{@article.title}': Friction Level: #{@article.conflict_label}"
+%>
+
+<div style="max-width: 1100px; margin: 40px auto; padding: 0 20px; font-family: sans-serif; color: var(--text-main);">
+  
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <%= link_to "← BACK TO DUEL", articles_path, class: "meta-row", style: "text-decoration: none; border-bottom: 1px solid #e2e8f0;" %>
+    
+    <div style="display: flex; gap: 8px; align-items: center;">
+      
+      <button class="social-btn js-copy-btn" 
+              data-url="<%= share_url %>" 
+              style="cursor: pointer; outline: none; border: 1px solid var(--border-color);">
+        LINK
+      </button>
+
+      <a href="https://twitter.com/intent/tweet?url=<%= u share_url %>&text=<%= u share_text %>" target="_blank" class="social-btn">𝕏</a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=<%= u share_url %>" target="_blank" class="social-btn" style="color: #1877F2;">FB</a>
+      <a href="https://www.reddit.com/submit?url=<%= u share_url %>&title=<%= u share_text %>" target="_blank" class="social-btn" style="color: #FF4500;">Reddit</a>
+    </div>
+  </div>
+
+  <header style="margin-bottom: 40px;">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;">
+      <h1 style="font-size: 2.5em; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin: 0;">
+        <%= @article.title %>
+      </h1>
+      <div style="text-align: right; flex-shrink: 0;">
+        <span class="badge" style="background: <%= article_style[:bg] %>; color: <%= article_style[:text] %>; border: 1px solid <%= article_style[:border] %>; padding: 10px 20px; font-size: 0.9em;">
+          <%= @article.conflict_label %>
+        </span>
+        <div class="meta-row" style="margin-top: 10px;">FRICTION SCORE: <%= @article.disagreement_score.round(2) %></div>
+      </div>
+    </div>
+    <div style="margin-top: 20px;">
+      <%= link_to "Read Original Source ↗", @article.link, target: "_blank", class: "trait-badge", style: "text-decoration: none; padding: 8px 16px;" %>
+    </div>
+  </header>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px; align-items: center;" class="responsive-stack">
+    
+    <%# Updated container: Border and subtle background now match the conflict level %>
+    <div style="background: #fff; 
+                padding: 30px; 
+                border-radius: var(--radius); 
+                border: 2px solid <%= article_style[:border] %>; 
+                box-shadow: 0 10px 15px -3px <%= article_style[:border] %>66; 
+                position: relative;">
+      
+      <%# Optional: A small indicator dot in the corner %>
+      <div style="position: absolute; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; background: <%= article_style[:text] %>;"></div>
+      
+      <h3 class="meta-row" style="margin-bottom: 20px; color: <%= article_style[:text] %>;">SENTIMENT OVERLAP</h3>
+      <canvas id="disagreementChart" width="400" height="400"></canvas>
+    </div>
+
+    <div>
+      <h3 class="meta-row">NARRATIVE DRIFT</h3>
+      <p style="font-size: 1.1em; line-height: 1.6; color: var(--text-muted);">
+        The chart on the left visualizes the intensity and direction of each model's analysis. 
+        Where the shapes **diverge**, you find the ideological friction.
+      </p>
+      
+      <%# Update the status badge in the description area too %>
+      <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
+        <span class="badge" style="background: <%= article_style[:bg] %>; color: <%= article_style[:text] %>; border: 1px solid <%= article_style[:border] %>;">
+          Status: <%= @article.conflict_label %>
+        </span>
+      </div>
+
+      <div style="margin-top: 30px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 12px; height: 12px; background: rgba(37, 99, 235, 0.7); border-radius: 2px;"></div>
+          <span class="meta-row">Gemini Strategy</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 12px; height: 12px; background: rgba(0, 0, 0, 0.7); border-radius: 2px;"></div>
+          <span class="meta-row">Grok Strategy</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;" class="responsive-stack">
+    <% @article.article_analyses.each do |analysis| %>
+      <div class="article-card" style="cursor: default; transform: none; hover: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+           <span class="engine-label" style="<%= analysis.llm_name == 'grok' ? 'background: #000;' : '' %>">
+             <%= analysis.llm_name %>
+           </span>
+           <div style="display: flex; gap: 4px;">
+             <span class="trait-badge"><%= analysis.bias_label %></span>
+           </div>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+          <h4 class="meta-row">EXECUTIVE SUMMARY</h4>
+          <p style="font-size: 1.1em; line-height: 1.5; font-weight: 500; color: var(--text-main);">
+            "<%= analysis.summary %>"
+          </p>
+        </div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 12px;">
+          <h4 class="meta-row">REASONING & LOGIC</h4>
+          <p style="font-size: 0.9em; line-height: 1.6; color: var(--text-muted); font-style: italic;">
+            <%= analysis.reasoning %>
+          </p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+document.addEventListener("turbo:load", function() {
+  const ctx = document.getElementById('disagreementChart');
+  if (!ctx) return;
+
+  <% 
+    gemini = @article.article_analyses.find { |a| a.llm_name == 'gemini' }
+    grok = @article.article_analyses.find { |a| a.llm_name == 'grok' }
+  %>
+
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Bias', 'Heat', 'Evaluation'],
+      datasets: [
+        {
+          label: 'Gemini',
+          data: [<%= gemini&.bias || 0 %>, <%= gemini&.heat || 0 %>, <%= gemini&.evaluation || 0 %>],
+          fill: true,
+          backgroundColor: 'rgba(37, 99, 235, 0.2)',
+          borderColor: 'rgba(37, 99, 235, 1)',
+          pointBackgroundColor: 'rgba(37, 99, 235, 1)',
+          borderWidth: 2
+        },
+        {
+          label: 'Grok',
+          data: [<%= grok&.bias || 0 %>, <%= grok&.heat || 0 %>, <%= grok&.evaluation || 0 %>],
+          fill: true,
+          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+          borderColor: 'rgba(0, 0, 0, 1)',
+          pointBackgroundColor: 'rgba(0, 0, 0, 1)',
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      scales: {
+        r: {
+          angleLines: { display: true },
+          suggestedMin: -1,
+          suggestedMax: 1,
+          ticks: { display: false }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+  const copyBtn = document.querySelector(".js-copy-btn");
+
+  if (copyBtn) {
+    copyBtn.addEventListener("click", function() {
+      const url = this.dataset.url;
+
+      navigator.clipboard.writeText(url).then(() => {
+        // Visual Feedback
+        const originalText = this.innerText;
+        this.innerText = "COPIED!";
+        this.style.color = "#16a34a"; // Success Green
+        this.style.borderColor = "#16a34a";
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+          this.innerText = originalText;
+          this.style.color = ""; 
+          this.style.borderColor = "";
+        }, 2000);
+      }).catch(err => {
+        console.error("Failed to copy: ", err);
+      });
+    });
+  }
+});
+</script>
+
+<style>
+  @media (max-width: 800px) {
+    .responsive-stack { grid-template-columns: 1fr !important; }
+  }
+</style>

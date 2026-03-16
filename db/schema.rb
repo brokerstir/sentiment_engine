@@ -10,9 +10,30 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_07_102920) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_catalog.plpgsql"
+ActiveRecord::Schema[8.0].define(version: 2026_03_15_165014) do
+  create_table "article_analyses", force: :cascade do |t|
+    t.integer "article_id", null: false
+    t.string "llm_name"
+    t.float "bias"
+    t.text "summary"
+    t.float "heat"
+    t.float "evaluation"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "reasoning"
+    t.index ["article_id"], name: "index_article_analyses_on_article_id"
+  end
+
+  create_table "articles", force: :cascade do |t|
+    t.string "title"
+    t.string "link"
+    t.json "keywords"
+    t.json "category"
+    t.datetime "pub_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.float "disagreement_score"
+  end
 
   create_table "sentiment_analyses", force: :cascade do |t|
     t.string "llm_model"
@@ -54,6 +75,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_07_102920) do
     t.index ["status"], name: "index_trends_on_status"
   end
 
+  add_foreign_key "article_analyses", "articles"
   add_foreign_key "sentiment_analyses", "source_items"
   add_foreign_key "source_items", "trends"
 end
