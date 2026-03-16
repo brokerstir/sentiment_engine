@@ -6,7 +6,18 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   Rails.application.routes.draw do
+    resources :articles, only: [ :index, :show ] do
+      collection do
+        delete :reset_game # Using DELETE for a reset is standard REST
+      end
+
+      member do
+        post :reveal # This allows us to save the "solved" state to the session
+      end
+    end
+
+    root "articles#index"
+
     resources :trends, only: [ :index, :show ]
-    root "trends#index"
   end
 end

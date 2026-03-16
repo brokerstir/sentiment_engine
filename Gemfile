@@ -75,3 +75,5 @@ group :test do
 end
 
 gem "dockerfile-rails", ">= 1.7", group: :development
+
+gem "httparty", "~> 0.24.2"

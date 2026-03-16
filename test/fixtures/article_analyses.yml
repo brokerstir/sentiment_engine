@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  article: one
+  llm_name: MyString
+  bias: 1.5
+  summary: MyText
+  heat: 1.5
+  evaluation: 1.5
+
+two:
+  article: two
+  llm_name: MyString
+  bias: 1.5
+  summary: MyText
+  heat: 1.5
+  evaluation: 1.5

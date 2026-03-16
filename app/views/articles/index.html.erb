@@ -1,0 +1,152 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "showdown", "data-turbo-track": "reload" %>
+<% end %>
+
+<div style="max-width: 1200px; margin: 40px auto; padding: 0 20px; font-family: sans-serif;">
+  
+  <div class="header-container">
+    <div>
+      <h1 class="battle-title">
+        AI DUEL
+        <span class="vs-tag">Gemini <span style="color: #000;">vs</span> Grok</span>
+      </h1>
+    </div>
+    <div style="text-align: right;">
+    
+      <div style="margin-top: 5px;">
+        <%= link_to "Reset Game", reset_game_articles_path, 
+                    data: { turbo_method: :delete }, 
+                    style: "font-size: 10px; font-weight: 900; color: #dc2626; text-transform: uppercase; text-decoration: none; border-bottom: 1px solid #dc2626;" %>
+      </div>
+    </div>
+  </div>
+
+  <div class="article-grid">
+    <% @articles.each do |article| %>
+      <% is_revealed = @revealed_ids.include?(article.id) %>
+      
+      <div class="article-card js-article-card <%= 'unmasked' if is_revealed %>" data-article-id="<%= article.id %>">
+        <div>
+          <div class="meta-row">
+            <%= article.category&.first&.upcase || "GENERAL" %> // <%= article.pub_date&.strftime("%b %d, %Y") %>
+          </div>
+
+          <% style = article.conflict_style %>
+          <span class="badge" style="background: <%= style[:bg] %>; color: <%= style[:text] %>; border-color: <%= style[:border] %>;">
+            <%= article.conflict_label %>
+          </span>
+
+          <h2 class="article-title">
+            <%= link_to article.title, article_path(article), style: "text-decoration: none; color: inherit;" %>
+          </h2>
+
+          <div class="analyses-container" style="margin-top: 20px;">
+            <% article.article_analyses.to_a.shuffle.each_with_index do |analysis, idx| %>
+              <div class="analysis-entry js-analysis-entry" 
+                   data-llm-name="<%= analysis.llm_name %>"
+                   style="margin-bottom: 25px; border-left: 3px solid #000; padding-left: 15px; position: relative;">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="model-placeholder" style="font-family: monospace; font-weight: 900; font-size: 0.8em; background: #eee; padding: 2px 6px; border: 1px solid #000;">
+                    MODEL <%= idx == 0 ? 'A' : 'B' %>
+                  </span>
+                  
+                  <span class="llm-identity" style="font-family: monospace; font-weight: 900; font-size: 0.8em; background: #000; color: #fff; padding: 2px 6px; border: 1px solid #000;">
+                    <%= analysis.llm_name %>
+                  </span>
+
+                  <span class="js-guess-feedback" style="font-family: monospace; font-weight: 900; font-size: 0.75em; display: none; letter-spacing: -0.5px;"></span>
+                </div>
+
+                <div style="display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap;">
+                  <span class="trait-badge" style="background: #f0f0f0; border: 1px solid #000; font-size: 10px; padding: 2px 5px; font-weight: 800; text-transform: uppercase;">
+                    <%= analysis.bias_label %>
+                  </span>
+                  <span class="trait-badge" style="background: #f0f0f0; border: 1px solid #000; font-size: 10px; padding: 2px 5px; font-weight: 800; text-transform: uppercase;">
+                    <%= analysis.heat_label %>
+                  </span>
+                  <span class="trait-badge" style="background: #f0f0f0; border: 1px solid #000; font-size: 10px; padding: 2px 5px; font-weight: 800; text-transform: uppercase;">
+                    <%= analysis.eval_label %>
+                  </span>
+                </div>
+
+                <div class="reasoning-text" style="font-size: 0.9em; line-height: 1.4; color: #444; margin-bottom: 12px; font-style: italic;">
+                  <%= analysis.reasoning %>
+                </div>
+
+                <div class="js-guess-actions" style="display: <%= is_revealed ? 'none' : 'flex' %>; gap: 5px;">
+                  <button class="js-guess-btn" data-guess="gemini" 
+                          style="flex: 1; font-family: monospace; font-size: 9px; font-weight: 900; padding: 5px; border: 2px solid #000; background: #fff; cursor: pointer; text-transform: uppercase;">
+                    Is Gemini?
+                  </button>
+                  <button class="js-guess-btn" data-guess="grok" 
+                          style="flex: 1; font-family: monospace; font-size: 9px; font-weight: 900; padding: 5px; border: 2px solid #000; background: #fff; cursor: pointer; text-transform: uppercase;">
+                    Is Grok?
+                  </button>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="cta-container" style="margin-top: auto; padding-top: 15px; border-top: 2px solid #eee;">
+          <%= link_to article_path(article), class: "cta-button", style: "text-decoration: none; display: block;" do %>
+            <div class="cta-text" style="text-align: center;">See Full Analysis →</div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+document.addEventListener("turbo:load", function() {
+  const cards = document.querySelectorAll(".js-article-card");
+
+  cards.forEach(card => {
+    const articleId = card.dataset.articleId;
+    const guessButtons = card.querySelectorAll(".js-guess-btn");
+
+    guessButtons.forEach(btn => {
+      btn.addEventListener("click", function(e) {
+        e.preventDefault();
+        const entry = this.closest(".js-analysis-entry");
+        const actualLLM = entry.dataset.llmName;
+        const userGuess = this.dataset.guess;
+        const feedback = entry.querySelector(".js-guess-feedback");
+
+        // 1. Evaluate Guess
+        if (userGuess === actualLLM) {
+          feedback.innerText = "✓ CORRECT";
+          feedback.style.color = "#16a34a"; 
+        } else {
+          feedback.innerText = "✕ WRONG";
+          feedback.style.color = "#dc2626";
+        }
+        feedback.style.display = "inline";
+
+        // 2. Immediate Reveal
+        unmaskCard(card, articleId);
+      });
+    });
+  });
+
+  function unmaskCard(card, articleId) {
+    if (card.classList.contains('unmasked')) return;
+
+    card.classList.add("unmasked");
+    
+    // Hide all guess buttons on this card
+    card.querySelectorAll(".js-guess-actions").forEach(el => el.style.display = "none");
+
+    // Persist to session
+    fetch(`/articles/${articleId}/reveal`, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+});
+</script>
