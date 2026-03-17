@@ -30,27 +30,6 @@ class ArticlesController < ApplicationController
     @revealed_ids = session[:revealed_ids]
   end
 
-  def index
-  @articles = Article.all
-
-  # Apply Conflict Filter
-  if params[:conflict].present?
-    case params[:conflict]
-    when "consensus"
-      @articles = @articles.where(disagreement_score: 0.0..0.5)
-    when "minor"
-      @articles = @articles.where(disagreement_score: 0.5..1.5)
-    when "strong"
-      @articles = @articles.where(disagreement_score: 1.5..3.0)
-    when "polarization"
-      @articles = @articles.where("disagreement_score > 3.0")
-    end
-  end
-
-  # Keep your existing revealed_ids logic
-  @revealed_ids = session[:revealed_article_ids] || []
-end
-
   def show
     @article = Article.find(params[:id])
   end

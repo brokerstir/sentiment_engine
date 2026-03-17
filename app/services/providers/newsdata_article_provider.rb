@@ -6,6 +6,7 @@ module Providers
     base_uri "https://newsdata.io/api/1"
 
     CATEGORIES = %w[world politics domestic crime health science].freeze
+    # CATEGORIES = %w[world politics ].freeze
 
     def initialize
       @api_key = Rails.application.credentials.dig(:newsdata, :api_key)
