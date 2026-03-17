@@ -2,7 +2,7 @@
   <%= stylesheet_link_tag "showdown", "data-turbo-track": "reload" %>
 <% end %>
 
-<div style="max-width: 1200px; margin: 40px auto; padding: 0 20px; font-family: sans-serif;">
+<div style="max-width: 1200px; margin: 30px auto; padding: 0 20px; font-family: sans-serif;">
   
   <div class="header-container">
     <div>
@@ -19,6 +19,36 @@
                     style: "font-size: 10px; font-weight: 900; color: #dc2626; text-transform: uppercase; text-decoration: none; border-bottom: 1px solid #dc2626;" %>
       </div>
     </div>
+  </div>
+
+  <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+    
+    <%# 1. Reset/All Link %>
+    <%= link_to "ALL", articles_path, 
+        class: "trait-badge", 
+        style: "text-decoration: none; padding: 6px 12px; border: #{params[:conflict].blank? ? '2px solid #000' : '1px solid #e2e8f0'}; background: #{params[:conflict].blank? ? '#f8fafc' : '#fff'}" %>
+
+    <%# 2. Dynamic Conflict Filters %>
+    <% 
+      [
+        { label: "Consensus", param: "consensus", score: 0.2 },
+        { label: "Minor Conflict", param: "minor", score: 1.0 },
+        { label: "Strong Conflict", param: "strong", score: 2.0 },
+        { label: "Polarization", param: "polarization", score: 4.0 }
+      ].each do |filter| 
+        # Use a temporary article instance to grab the style for this score range
+        btn_style = Article.new(disagreement_score: filter[:score]).conflict_style
+        is_active = params[:conflict] == filter[:param]
+    %>
+      <%= link_to filter[:label].upcase, articles_path(conflict: filter[:param]), 
+          class: "badge", 
+          style: "text-decoration: none; 
+                  background: #{btn_style[:bg]}; 
+                  color: #{btn_style[:text]}; 
+                  border: #{is_active ? '2px solid #000' : "1px solid #{btn_style[:border]}"}; 
+                  opacity: #{params[:conflict].present? && !is_active ? '0.5' : '1'};
+                  padding: 6px 12px;" %>
+    <% end %>
   </div>
 
   <div class="article-grid">

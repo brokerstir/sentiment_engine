@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_15_165014) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_093940) do
   create_table "article_analyses", force: :cascade do |t|
     t.integer "article_id", null: false
     t.string "llm_name"
@@ -21,6 +21,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_165014) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "reasoning"
+    t.index ["article_id", "llm_name"], name: "index_article_analyses_on_article_id_and_llm_name", unique: true
     t.index ["article_id"], name: "index_article_analyses_on_article_id"
   end
 
