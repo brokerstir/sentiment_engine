@@ -6,6 +6,9 @@ class ArticleAnalysis < ApplicationRecord
   validates :heat, inclusion: { in: 0.0..1.0 }, allow_nil: true
   validates :evaluation, inclusion: { in: -1.0..1.0 }, allow_nil: true
 
+  validates :llm_name, uniqueness: { scope: :article_id,
+            message: "already has an analysis for this article" }
+
   after_commit :refresh_article_disagreement_score
 
   def bias_label

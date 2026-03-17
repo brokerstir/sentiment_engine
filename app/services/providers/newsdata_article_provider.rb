@@ -19,12 +19,16 @@ module Providers
     def fetch
       saved_articles = []
 
-      if @api_key.blank?
-        Rails.logger.error "Aborting fetch: No API Key."
-        return []
-      end
+      return [] if @api_key.blank? && Rails.logger.error("Aborting fetch: No API Key.")
 
       Rails.logger.info "--- Starting NewsData Fetch Cycle ---"
+
+      # --- CRITICAL FIX: MOVE GUARDS OUTSIDE THE LOOP ---
+      # Query the DB ONCE for the entire fetch cycle, not once per category.
+      lookback_date = 5.days.ago
+      existing_links = Article.where("pub_date >= ?", lookback_date).pluck(:link).to_set
+      existing_titles = Article.where("pub_date >= ?", lookback_date).pluck(:title).to_set
+      # --------------------------------------------------
 
       CATEGORIES.each do |category|
         Rails.logger.info "[REQ] Category: #{category}..."
@@ -38,19 +42,19 @@ module Providers
 
         if response.success?
           articles_data = response.parsed_response["results"] || []
-
-          if articles_data.empty?
-            Rails.logger.warn "  [EMPTY] API returned success but 0 results for #{category}."
-          else
-            Rails.logger.info "  [SUCCESS] Found #{articles_data.size} articles."
-          end
+          Rails.logger.info "  [SUCCESS] Found #{articles_data.size} articles." unless articles_data.empty?
 
           articles_data.each do |data|
-            # We use link as the unique identifier
-            article = Article.find_or_initialize_by(link: data["link"])
-            is_new = article.new_record?
+            # Skip if link or title exists (Double Guard)
+            if existing_links.include?(data["link"]) || existing_titles.include?(data["title"])
+              # Only log skips if you're debugging; otherwise, it clogs logs
+              next
+            end
+
+            article = Article.new(link: data["link"])
 
             begin
+              # Use public_send or check if data['pubDate'] needs parsing
               article.update!(
                 title: data["title"],
                 keywords: data["keywords"] || [],
@@ -59,13 +63,18 @@ module Providers
               )
 
               saved_articles << article
-              Rails.logger.info "    #{is_new ? '[CREATED]' : '[UPDATED]'} ID: #{article.id} | #{article.title[0..40]}..."
+
+              # Add to sets so if "Tech" and "Business" both return the same article,
+              # we skip it in the second category's loop.
+              existing_links << data["link"]
+              existing_titles << data["title"]
+
+              Rails.logger.info "    [CREATED] ID: #{article.id} | #{article.title[0..30]}..."
             rescue => e
               Rails.logger.error "    [SAVE FAILED] for #{data['link']}: #{e.message}"
             end
           end
         else
-          # This is the most important log for you right now
           Rails.logger.error "[API ERROR] #{category} failed | Code: #{response.code} | Message: #{response.body}"
         end
       end

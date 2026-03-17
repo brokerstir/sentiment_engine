@@ -9,16 +9,19 @@ class Article < ApplicationRecord
   end
 
   def update_disagreement_score!
-    return update_column(:disagreement_score, 0.0) if article_analyses.count < 2
+    gemini = article_analyses.find_by(llm_name: "gemini")
+    grok = article_analyses.find_by(llm_name: "grok")
 
-    # Assuming we are comparing Gemini and Grok
-    a1 = article_analyses.find_by(llm_name: "gemini")
-    a2 = article_analyses.find_by(llm_name: "grok")
+    # If we don't have exactly two, reset score to 0 and stop
+    unless gemini && grok
+      update_column(:disagreement_score, 0.0)
+      return
+    end
 
-    return unless a1 && a2
+    new_score = calculate_polarity_pivot(gemini, grok)
 
-    score = calculate_polarity_pivot(a1, a2)
-    update_column(:disagreement_score, score)
+    # Only update if the score has actually changed (saves DB hits)
+    update_column(:disagreement_score, new_score) if disagreement_score != new_score
   end
 
   def conflict_label
@@ -31,19 +34,6 @@ class Article < ApplicationRecord
       "Strong Conflict"
     else
       "Polarization"
-    end
-  end
-
-  def conflict_color
-    case disagreement_score
-    when 0.0..0.5
-      "text-green-600 bg-green-50 border-green-200"
-    when 0.5..1.5
-      "text-yellow-600 bg-yellow-50 border-yellow-200"
-    when 1.5..3.0
-      "text-orange-600 bg-orange-50 border-orange-200"
-    else
-      "text-red-600 bg-red-50 border-red-200"
     end
   end
 

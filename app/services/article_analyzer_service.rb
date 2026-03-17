@@ -169,14 +169,18 @@ end
   end
 
   def save_analysis(llm, data)
-    ArticleAnalysis.create!(
-      article: @article,
-      llm_name: llm.to_s,
+    # 1. Find the existing analysis for this model, or start a new one
+    analysis = @article.article_analyses.find_or_initialize_by(llm_name: llm.to_s)
+
+    # 2. Update the attributes (this works for both new and existing records)
+    analysis.update!(
       bias: data["bias"],
       heat: data["heat"],
       evaluation: data["evaluation"],
       summary: data["summary"],
       reasoning: data["reasoning"]
     )
+
+    analysis
   end
 end
