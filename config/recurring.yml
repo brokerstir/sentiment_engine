@@ -18,3 +18,8 @@ production:
   automated_analysis:
     class: AutomatedAnalysisJob
     schedule: "0 0,8,16 * * *"
+
+  # Runs daily at 8am to fetch and enqueue articles for analysis
+  ingest_news:
+    class: IngestNewsJob
+    schedule: "0 8 * * *"
