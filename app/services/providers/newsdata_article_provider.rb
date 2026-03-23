@@ -5,7 +5,7 @@ module Providers
     include HTTParty
     base_uri "https://newsdata.io/api/1"
 
-    CATEGORIES = %w[world politics domestic crime health science].freeze
+    CATEGORIES = %w[world politics domestic].freeze
     # CATEGORIES = %w[world politics ].freeze
 
     def initialize
