@@ -15,4 +15,21 @@ test:
   <<: *default
 
 production:
-  <<: *default
+  dispatchers:
+    - polling_interval: 1
+      batch_size: 500
+      recurring_tasks:
+        clear_solid_queue_finished_jobs:
+          command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
+          schedule: every hour at minute 12
+        ingest_news:
+          class: IngestNewsJob
+          schedule: "0 8 * * *"
+        automated_analysis:
+          class: AutomatedAnalysisJob
+          schedule: "0 0,8,16 * * *"
+  workers:
+    - queues: "*"
+      threads: 3
+      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      polling_interval: 0.1
